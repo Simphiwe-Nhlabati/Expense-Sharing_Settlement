@@ -1,0 +1,13 @@
+# Bun configuration file
+# https://bun.sh/docs/runtime/bunfig
+
+[install]
+# Use exact versions when installing
+exact = true
+
+# Save dev dependencies separately
+save-dev = false
+
+[test]
+# Run tests with Bun
+preload = ["./tests/setup.ts"]
