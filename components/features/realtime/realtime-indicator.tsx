@@ -1,7 +1,6 @@
 "use client"
 
 import { useRealtimeBalance } from "@/lib/hooks/use-realtime-balance"
-import { Wifi, WifiOff } from "lucide-react"
 import { useState } from "react"
 
 interface RealtimeIndicatorProps {
@@ -27,12 +26,17 @@ export function RealtimeIndicator({ groupId }: RealtimeIndicatorProps) {
 
   return (
     <div
-      className="flex items-center gap-1.5 text-xs text-muted-foreground"
+      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
       title={connected ? "Live updates active" : "Connecting to live updates..."}
     >
-      <span className={`h-2 w-2 rounded-full animate-pulse ${connected ? "bg-green-500" : "bg-yellow-400"}`} />
+      <span className={`relative flex h-2.5 w-2.5`}>
+        {connected && (
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+        )}
+        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${connected ? "bg-emerald-500" : "bg-yellow-400"}`} />
+      </span>
       <span className="hidden sm:inline">
-        {connected ? "Live" : "Connecting..."}
+        {connected ? "Live Updates" : "Connecting..."}
       </span>
     </div>
   )

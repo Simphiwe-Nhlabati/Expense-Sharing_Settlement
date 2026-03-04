@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -30,16 +30,13 @@ interface ExportButtonProps {
  */
 export function ExportButton({ groupId, groupName }: ExportButtonProps) {
   const [isPending, startTransition] = useTransition()
-  const [exportType, setExportType] = useState<"csv" | "pdf" | null>(null)
 
   function fetchAndExport(type: "csv" | "pdf") {
-    setExportType(type)
     startTransition(async () => {
       const result = await getGroupExportData(groupId)
 
       if (!result.success || !result.rows) {
         toast.error(result.error || "Export failed")
-        setExportType(null)
         return
       }
 
@@ -48,15 +45,13 @@ export function ExportButton({ groupId, groupName }: ExportButtonProps) {
       } else {
         printPDF(result.rows, result.groupName!, result.generatedAt!)
       }
-
-      setExportType(null)
     })
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={isPending} id="export-btn">
+        <Button variant="outline" size="sm" disabled={isPending} id="export-btn" className="rounded-full border-2">
           {isPending ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
@@ -65,13 +60,14 @@ export function ExportButton({ groupId, groupName }: ExportButtonProps) {
           Export
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="rounded-xl">
         <DropdownMenuItem
           id="export-csv"
           onClick={() => fetchAndExport("csv")}
           disabled={isPending}
+          className="gap-2"
         >
-          <Sheet className="mr-2 h-4 w-4 text-green-600" />
+          <Sheet className="h-4 w-4 text-emerald-500" />
           Export as CSV
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -79,9 +75,10 @@ export function ExportButton({ groupId, groupName }: ExportButtonProps) {
           id="export-pdf"
           onClick={() => fetchAndExport("pdf")}
           disabled={isPending}
+          className="gap-2"
         >
-          <FileText className="mr-2 h-4 w-4 text-red-500" />
-          Export as PDF (Bank Statement)
+          <FileText className="h-4 w-4 text-primary" />
+          Export as PDF
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
