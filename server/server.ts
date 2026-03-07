@@ -10,6 +10,7 @@ import { safeLogger } from "./middleware/safe-logger";
 import { rateLimiter } from "./middleware/rate-limiter";
 import { auth } from "./middleware/auth";
 import { sanitizeBody } from "./middleware/sanitization";
+import { attachSubscriptionContext } from "./middleware/subscription-meter";
 import { HonoEnv } from "./types";
 
 const app = new Hono<HonoEnv>().basePath("/api");
@@ -86,6 +87,7 @@ app.use(
 // 7. Rate Limiter (database-backed)
 app.use("/expenses/*", rateLimiter(50)); // 50 requests/minute for expense operations
 app.use("/groups/*", rateLimiter(100)); // 100 requests/minute for group operations
+app.use("/subscription/*", rateLimiter(30)); // 30 requests/minute for subscription operations
 app.use("*", rateLimiter(200)); // General limit: 200 requests/minute
 
 // 8. Request Sanitization (sanitize all JSON body inputs)
@@ -99,17 +101,24 @@ app.use("/auth/*", auth());
 app.use("/expenses/*", auth());
 app.use("/groups/*", auth());
 app.use("/realtime/*", auth());
+app.use("/subscription/*", auth());
+
+// 11. Attach Subscription Context (for authenticated requests)
+app.use("/subscription/*", attachSubscriptionContext());
+app.use("/groups/*", attachSubscriptionContext());
 
 // --- Routes ---
 import authRoutes from "./routes/auth";
 import groupRoutes from "./routes/groups";
 import expenseRoutes from "./routes/expenses";
 import realtimeRoutes from "./routes/realtime";
+import subscriptionRoutes from "./routes/subscription";
 
 app.route("/auth", authRoutes);
 app.route("/groups", groupRoutes);
 app.route("/expenses", expenseRoutes);
 app.route("/realtime", realtimeRoutes);
+app.route("/subscription", subscriptionRoutes);
 
 // --- Health Check (public) ---
 app.get("/health", (c) => {

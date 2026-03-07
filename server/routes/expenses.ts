@@ -4,10 +4,13 @@ import { zValidator } from "@hono/zod-validator";
 import { db } from "../db";
 import { expenses, ledgerEntries, users } from "../db/schema";
 import { runIdempotentAction } from "../middleware/idempotency";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte, desc } from "drizzle-orm";
 import { verifyGroupMember } from "../middleware/group-auth";
 import { logAudit } from "../services/audit";
 import { sanitize } from "../middleware/sanitization";
+import { getHistoryCutoffDate } from "../services/subscription";
+import { canUserExportPdf, canUserExportCsv } from "../services/feature-flags";
+import { subscriptionMeter } from "../middleware/subscription-meter";
 import { HonoEnv } from "../types";
 
 const app = new Hono<HonoEnv>();
@@ -103,19 +106,115 @@ app.post("/", zValidator("json", createExpenseSchema), async (c) => {
 // GET /:groupId
 app.get("/:groupId", verifyGroupMember(), async (c) => {
     const groupId = c.req.param("groupId");
-    
+    const userId = c.get("userId");
+
+    if (!userId) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    // Apply history cutoff based on subscription tier
+    const historyCutoff = await getHistoryCutoffDate(userId);
+
+    const whereConditions: any[] = [
+        eq(expenses.groupId, groupId),
+        eq(expenses.deletedAt, null as any)
+    ];
+
+    if (historyCutoff) {
+        whereConditions.push(gte(expenses.date, historyCutoff));
+    }
+
     const groupExpenses = await db.query.expenses.findMany({
-        where: and(
-            eq(expenses.groupId, groupId),
-            eq(expenses.deletedAt, null as any)
-        ),
-        orderBy: (expenses, { desc }) => [desc(expenses.date)],
+        where: and(...whereConditions),
+        orderBy: [desc(expenses.date)],
         with: {
             payer: true,
         }
     });
 
-    return c.json(groupExpenses);
+    return c.json({
+        expenses: groupExpenses,
+        historyLimited: historyCutoff !== null,
+        cutoffDate: historyCutoff,
+    });
+});
+
+// GET /:groupId/export/pdf - Export expenses to PDF (HOUSEHOLD+ feature)
+app.get("/:groupId/export/pdf", subscriptionMeter("FEATURE", "pdf_export"), verifyGroupMember(), async (c) => {
+    const groupId = c.req.param("groupId");
+    const userId = c.get("userId");
+
+    if (!userId) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    // In production, generate PDF using pdf-lib or react-pdf
+    // For now, return a placeholder response
+    const groupExpenses = await db.query.expenses.findMany({
+        where: and(
+            eq(expenses.groupId, groupId),
+            eq(expenses.deletedAt, null as any)
+        ),
+        orderBy: [desc(expenses.date)],
+        with: {
+            payer: true,
+            group: true,
+        }
+    });
+
+    // TODO: Generate actual PDF
+    // const pdfBuffer = await generatePdf(groupExpenses);
+    // return c.body(pdfBuffer, 200, {
+    //     'Content-Type': 'application/pdf',
+    //     'Content-Disposition': `attachment; filename="expenses-${groupId}.pdf"`
+    // });
+
+    return c.json({
+        message: "PDF export feature - integrate with pdf-lib",
+        expenses: groupExpenses,
+        generatedAt: new Date().toISOString(),
+    });
+});
+
+// GET /:groupId/export/csv - Export expenses to CSV (HOUSEHOLD+ feature)
+app.get("/:groupId/export/csv", subscriptionMeter("FEATURE", "csv_xero_export"), verifyGroupMember(), async (c) => {
+    const groupId = c.req.param("groupId");
+    const userId = c.get("userId");
+
+    if (!userId) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const groupExpenses = await db.query.expenses.findMany({
+        where: and(
+            eq(expenses.groupId, groupId),
+            eq(expenses.deletedAt, null as any)
+        ),
+        orderBy: [desc(expenses.date)],
+        with: {
+            payer: true,
+            group: true,
+        }
+    });
+
+    // Generate CSV
+    const csvRows = [
+        ["Date", "Description", "Amount (ZAR)", "Paid By", "Group"],
+        ...groupExpenses.map((e) => [
+            e.date.toISOString(),
+            e.description,
+            (e.amount / 100).toFixed(2),
+            e.payer.fullName || e.payer.email,
+            e.group?.name || groupId,
+        ]),
+    ];
+
+    const csvContent = csvRows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+
+    return c.body(csvContent, 200, {
+        "Content-Type": "text/csv",
+        "Content-Disposition": `attachment; filename="expenses-${groupId}.csv"`,
+    });
 });
 
 export default app;

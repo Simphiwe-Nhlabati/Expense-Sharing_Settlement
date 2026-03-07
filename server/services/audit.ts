@@ -3,8 +3,8 @@ import { auditLogs } from "../db/schema";
 
 export async function logAudit(params: {
   userId?: string;
-  action: "CREATE" | "UPDATE" | "DELETE" | "SETTLE";
-  entityType: "groups" | "expenses" | "ledger" | "group_members";
+  action: "CREATE" | "UPDATE" | "DELETE" | "SETTLE" | "UPGRADE_SUBSCRIPTION" | "CANCEL_SUBSCRIPTION";
+  entityType: "groups" | "expenses" | "ledger" | "group_members" | "subscriptions";
   entityId?: string;
   metadata?: any;
   changes?: { before: any; after: any };

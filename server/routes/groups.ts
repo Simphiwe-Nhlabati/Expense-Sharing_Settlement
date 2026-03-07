@@ -5,6 +5,7 @@ import { db } from "../db";
 import { groups, groupMembers, users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { verifyGroupMember } from "../middleware/group-auth";
+import { subscriptionMeter } from "../middleware/subscription-meter";
 import { logAudit } from "../services/audit";
 import { sanitize } from "../middleware/sanitization";
 import { v4 as uuidv4 } from "uuid";
@@ -30,11 +31,11 @@ async function getUserIdByAuthId(authId: string) {
 // GET /groups - List User's Groups
 app.get("/", async (c) => {
   const authId = c.get("authId");
-  
+
   if (!authId) return c.json({ error: "Unauthorized" }, 401);
 
   const userId = await getUserIdByAuthId(authId);
-  
+
   if (!userId) return c.json({ error: "User profile not found" }, 404);
 
   const userGroups = await db.select({
@@ -50,11 +51,21 @@ app.get("/", async (c) => {
     eq(groupMembers.userId, userId)
   ));
 
-  return c.json(userGroups);
+  // Add subscription info to response
+  const tier = c.get("subscriptionTier");
+  const limits = c.get("subscriptionLimits");
+
+  return c.json({
+    groups: userGroups,
+    subscription: tier ? {
+      tier,
+      limits,
+    } : undefined,
+  });
 });
 
 // POST /groups - Create Group
-app.post("/", zValidator("json", createGroupSchema), async (c) => {
+app.post("/", subscriptionMeter("CREATE_GROUP"), zValidator("json", createGroupSchema), async (c) => {
   const authId = c.get("authId");
   
   const userId = await getUserIdByAuthId(authId);

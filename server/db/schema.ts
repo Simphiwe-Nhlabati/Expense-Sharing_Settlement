@@ -1,6 +1,38 @@
 import { pgTable, text, integer, bigint, boolean, timestamp, json, uuid, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
+// --- Subscription Tiers (Enum) ---
+export type SubscriptionTier = "BRAAI" | "HOUSEHOLD" | "AGENT";
+export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, {
+  maxGroups: number;
+  maxMembersPerGroup: number;
+  historyDays: number;
+  features: string[];
+  priceZar: number;
+}> = {
+  BRAAI: {
+    maxGroups: 2,
+    maxMembersPerGroup: 10,
+    historyDays: 30,
+    features: ["basic_splitting", "invite_codes", "zar_precision"],
+    priceZar: 0,
+  },
+  HOUSEHOLD: {
+    maxGroups: -1, // Unlimited
+    maxMembersPerGroup: 25,
+    historyDays: -1, // Lifetime
+    features: ["basic_splitting", "invite_codes", "zar_precision", "recurring_expenses", "pdf_export", "priority_support"],
+    priceZar: 49,
+  },
+  AGENT: {
+    maxGroups: -1, // Unlimited
+    maxMembersPerGroup: 50,
+    historyDays: -1, // Lifetime
+    features: ["basic_splitting", "invite_codes", "zar_precision", "recurring_expenses", "pdf_export", "priority_support", "white_labeling", "csv_xero_export", "settlement_reminders", "popia_vault"],
+    priceZar: 299,
+  },
+};
+
 // --- Users ---
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -109,6 +141,24 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// --- Subscriptions ---
+// Stores user subscription tier and billing status
+export const subscriptions = pgTable("subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  tier: text("tier").notNull().default("BRAAI"), // BRAAI, HOUSEHOLD, AGENT
+  status: text("status").notNull().default("ACTIVE"), // ACTIVE, CANCELLED, PAST_DUE, TRIALING
+  stripeSubscriptionId: text("stripe_subscription_id").unique(), // Payment provider subscription ID
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_subscriptions_user_id").on(table.userId),
+  statusIdx: index("idx_subscriptions_status").on(table.status),
+}));
+
 // --- Relations ---
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
@@ -130,4 +180,15 @@ export const expensesRelations = relations(expenses, ({ one, many }) => ({
   group: one(groups, { fields: [expenses.groupId], references: [groups.id] }),
   payer: one(users, { fields: [expenses.paidBy], references: [users.id] }),
   ledgerEntries: many(ledgerEntries),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  user: one(users, { fields: [subscriptions.userId], references: [users.id] }),
+}));
+
+export const usersRelationsWithSubscription = relations(users, ({ many, one }) => ({
+  groups: many(groupMembers),
+  expensesPaid: many(expenses),
+  auditLogs: many(auditLogs),
+  subscription: one(subscriptions),
 }));

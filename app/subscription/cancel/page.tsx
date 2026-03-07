@@ -1,0 +1,43 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { AuthHeader } from "@/components/auth-header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { XCircle } from "lucide-react";
+
+export default function SubscriptionCancelPage() {
+  const router = useRouter();
+
+  return (
+    <div className="relative flex min-h-screen flex-col bg-background">
+      <AuthHeader />
+      <main className="flex-1 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <XCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+            <CardTitle>Payment Cancelled</CardTitle>
+            <CardDescription>
+              You cancelled the payment process. No charges were made.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-2">
+            <Button
+              className="flex-1"
+              variant="outline"
+              onClick={() => router.push("/subscription")}
+            >
+              View Plans
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={() => router.push("/")}
+            >
+              Go Home
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+}
