@@ -1,8 +1,19 @@
 import { createMiddleware } from "hono/factory";
 import { db } from "../db";
 import { idempotencyKeys } from "../db/schema";
-import { eq, lt } from "drizzle-orm";
+import { eq, and, lt } from "drizzle-orm";
 import { addMinutes } from "date-fns";
+import { createHash } from "node:crypto";
+
+/**
+ * Generate a scoped idempotency key hash.
+ * Scopes keys by (userId, path, key) to prevent cross-user collisions.
+ */
+function generateScopedKeyHash(userId: string, path: string, key: string): string {
+  // Create a unique hash combining user, path, and client-provided key
+  const composite = `${userId}:${path}:${key}`;
+  return createHash("sha256").update(composite).digest("hex");
+}
 
 /**
  * Basic idempotency middleware wrapper
@@ -17,12 +28,33 @@ export const idempotency = () =>
       return await next();
     }
 
-    // Check if key exists in DB
+    const userId = c.get("userId");
+    if (!userId) {
+      // Can't scope without user, let request proceed (or fail auth elsewhere)
+      return await next();
+    }
+
+    // Generate scoped key hash
+    const scopedKey = generateScopedKeyHash(userId, c.req.path, key);
+
+    // Check if key exists in DB (scoped to user)
     const existingKey = await db.query.idempotencyKeys.findFirst({
-      where: eq(idempotencyKeys.key, key),
+      where: eq(idempotencyKeys.key, scopedKey),
     });
 
     if (existingKey) {
+      // Verify request fingerprint matches (prevent replay with different body)
+      const bodyHash = await c.req.json().then(b => 
+        createHash("sha256").update(JSON.stringify(b)).digest("hex")
+      ).catch(() => null);
+
+      if (existingKey.params && bodyHash && existingKey.params !== bodyHash) {
+        return c.json({ 
+          error: "Idempotency key conflict",
+          details: "Same key used with different request body"
+        }, 409);
+      }
+
       // Return cached response
       return c.json(existingKey.responseBody, existingKey.responseCode as any);
     }
@@ -54,12 +86,25 @@ export async function runIdempotentAction<T>(
   // Configurable idempotency key TTL (default: 24 hours)
   const IDEMPOTENCY_KEY_TTL_MINUTES = parseInt(process.env.IDEMPOTENCY_KEY_TTL_MINUTES || "1440", 10);
 
+  // Generate scoped key hash to prevent cross-user collisions
+  const scopedKey = generateScopedKeyHash(userId, path, key);
+
+  // Create request body hash for fingerprint verification
+  const bodyHash = typeof params === "object" && params !== null
+    ? createHash("sha256").update(JSON.stringify(params)).digest("hex")
+    : null;
+
   // 1. Check if key exists (with row lock to prevent race conditions)
   const existing = await db.query.idempotencyKeys.findFirst({
-    where: eq(idempotencyKeys.key, key),
+    where: eq(idempotencyKeys.key, scopedKey),
   });
 
   if (existing) {
+    // SECURITY: Verify request fingerprint matches before replaying
+    if (bodyHash && existing.params !== bodyHash) {
+      throw new Error("Idempotency key conflict: Same key used with different request body");
+    }
+    
     // Return cached response
     return existing.responseBody as T;
   }
@@ -67,14 +112,14 @@ export async function runIdempotentAction<T>(
   // 2. Run the action
   const result = await action();
 
-  // 3. Save the idempotency key and response
+  // 3. Save the idempotency key and response (scoped to user)
   // Use try-catch to handle potential duplicate key errors
   try {
     await db.insert(idempotencyKeys).values({
-      key,
+      key: scopedKey, // Use scoped key hash
       userId,
       path,
-      params: params as any,
+      params: bodyHash, // Store body hash for fingerprint verification
       responseCode: 200,
       responseBody: result as any,
       expiresAt: addMinutes(new Date(), IDEMPOTENCY_KEY_TTL_MINUTES),
@@ -84,10 +129,14 @@ export async function runIdempotentAction<T>(
     if (error.code === "23505") {
       // Unique violation - fetch and return the existing response
       const existingKey = await db.query.idempotencyKeys.findFirst({
-        where: eq(idempotencyKeys.key, key),
+        where: eq(idempotencyKeys.key, scopedKey),
       });
 
       if (existingKey) {
+        // Verify fingerprint
+        if (bodyHash && existingKey.params !== bodyHash) {
+          throw new Error("Idempotency key conflict: Same key used with different request body");
+        }
         return existingKey.responseBody as T;
       }
     }

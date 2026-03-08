@@ -7,14 +7,16 @@ describe('Input Sanitization', () => {
         expect(sanitize(input)).toBe('Hello');
     });
 
-    it('should remove event handlers', () => {
+    it('should remove event handlers (strips all HTML with strict config)', () => {
         const input = '<img src=x onerror="alert(1)">';
-        expect(sanitize(input)).toBe('<img src=x >');
+        // With strict XSS config (no whitelist), all HTML tags are stripped
+        expect(sanitize(input)).toBe('');
     });
 
-    it('should remove javascript: protocol', () => {
+    it('should remove javascript: protocol (strips all HTML)', () => {
         const input = '<a href="javascript:alert(1)">Click</a>';
-        expect(sanitize(input)).toBe('<a href="">Click</a>');
+        // With strict XSS config, all HTML tags are stripped, only text remains
+        expect(sanitize(input)).toBe('Click');
     });
 
     it('should handle undefined or null', () => {

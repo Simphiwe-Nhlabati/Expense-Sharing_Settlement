@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Skeleton } from "@/components/ui/skeleton"
 import { Users, Banknote, ArrowRight } from "lucide-react"
 import Link from "next/link"
+import { formatZarAmount } from "@/lib/utils"
 
 async function fetchGroups(): Promise<any[]> {
   const response = await fetch("/api/groups", {
@@ -24,19 +25,37 @@ async function fetchGroups(): Promise<any[]> {
 }
 
 export function GroupList() {
-  const { data: groups, isLoading, refetch } = useQuery({
+  const { data: groups, isLoading, error } = useQuery({
     queryKey: ["groups"],
     queryFn: fetchGroups,
     refetchOnMount: true,
+    // Remove duplicate refetch - rely on query options only
   })
 
-  // Refetch on mount
-  React.useEffect(() => {
-    refetch()
-  }, [refetch])
+  // Removed manual useEffect refetch that caused double-fetch on mount
 
   if (isLoading) {
     return <GroupListSkeleton />
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-12 border-2 border-dashed rounded-2xl bg-destructive/10 animate-scale-in">
+        <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/20 mb-4">
+          <Users className="h-8 w-8 text-destructive" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Failed to load groups</h3>
+        <p className="text-muted-foreground max-w-sm mx-auto mb-4">
+          {error instanceof Error ? error.message : "An unexpected error occurred"}
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    )
   }
 
   if (!groups?.length) {
@@ -60,7 +79,7 @@ export function GroupList() {
           <Card className="group relative overflow-hidden border-0 shadow-lg card-lift h-full bg-card">
             {/* Gradient accent bar */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-            
+
             <CardHeader className="pb-3 space-y-2">
               <div className="flex justify-between items-start gap-2">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold group-hover:text-primary transition-colors">
@@ -74,7 +93,7 @@ export function GroupList() {
                 {group.description || "No description provided"}
               </CardDescription>
             </CardHeader>
-            
+
             <CardContent className="space-y-3">
                <div className="flex items-center justify-between pt-2 border-t">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -91,12 +110,12 @@ export function GroupList() {
                        <Banknote className="h-4 w-4" />
                      </div>
                      <div className="text-right">
-                       <p className="font-medium text-foreground">R{group.balance}</p>
+                       <p className="font-medium text-foreground">{formatZarAmount(group.balance)}</p>
                        <p className="text-xs">Balance</p>
                      </div>
                   </div>
                </div>
-               
+
                {/* Hover arrow indicator */}
                <div className="flex items-center justify-end text-primary opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
                  <span className="text-sm font-medium mr-1">View Group</span>

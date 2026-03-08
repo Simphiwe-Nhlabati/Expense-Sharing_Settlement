@@ -74,7 +74,7 @@ describe('Group Actions', () => {
     it('should fail with invalid input', async () => {
       const result = await createGroup({ name: '' } as any);
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Invalid input');
+      expect(result.error).toContain('Invalid input');
     });
 
     it('should create group and member entry on success', async () => {

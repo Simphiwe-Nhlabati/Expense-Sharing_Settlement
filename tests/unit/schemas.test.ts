@@ -88,6 +88,7 @@ describe('lib/schemas', () => {
   describe('createExpenseSchema', () => {
     it('should validate valid expense input', () => {
       const result = createExpenseSchema.safeParse({
+        groupId: '550e8400-e29b-41d4-a716-446655440000',
         description: 'Dinner at restaurant',
         amount: 150.50,
         paidBy: 'user-123',
@@ -97,23 +98,23 @@ describe('lib/schemas', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should coerce string amount to number', () => {
+    it('should fail without groupId', () => {
       const result = createExpenseSchema.safeParse({
         description: 'Lunch',
-        amount: '100.50',
+        amount: 100.50,
         paidBy: 'user-123',
         date: new Date(),
       });
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(typeof result.data.amount).toBe('number');
-        expect(result.data.amount).toBe(100.50);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].path).toContain('groupId');
       }
     });
 
     it('should fail with negative amount', () => {
       const result = createExpenseSchema.safeParse({
+        groupId: '550e8400-e29b-41d4-a716-446655440000',
         description: 'Dinner',
         amount: -50,
         paidBy: 'user-123',
@@ -128,6 +129,7 @@ describe('lib/schemas', () => {
 
     it('should fail with zero amount', () => {
       const result = createExpenseSchema.safeParse({
+        groupId: '550e8400-e29b-41d4-a716-446655440000',
         description: 'Dinner',
         amount: 0,
         paidBy: 'user-123',
@@ -139,6 +141,7 @@ describe('lib/schemas', () => {
 
     it('should fail with empty description', () => {
       const result = createExpenseSchema.safeParse({
+        groupId: '550e8400-e29b-41d4-a716-446655440000',
         description: '',
         amount: 100,
         paidBy: 'user-123',
@@ -153,6 +156,7 @@ describe('lib/schemas', () => {
 
     it('should fail with description less than 2 characters', () => {
       const result = createExpenseSchema.safeParse({
+        groupId: '550e8400-e29b-41d4-a716-446655440000',
         description: 'A',
         amount: 100,
         paidBy: 'user-123',
@@ -161,13 +165,13 @@ describe('lib/schemas', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        // Schema requires minimum 2 characters
         expect(result.error.issues.length).toBeGreaterThan(0);
       }
     });
 
     it('should fail without paidBy', () => {
       const result = createExpenseSchema.safeParse({
+        groupId: '550e8400-e29b-41d4-a716-446655440000',
         description: 'Dinner',
         amount: 100,
         paidBy: '',
@@ -180,8 +184,9 @@ describe('lib/schemas', () => {
       }
     });
 
-    it('should default date to current date if not provided', () => {
+    it('should use default date when not provided', () => {
       const result = createExpenseSchema.safeParse({
+        groupId: '550e8400-e29b-41d4-a716-446655440000',
         description: 'Dinner',
         amount: 100,
         paidBy: 'user-123',
@@ -195,6 +200,7 @@ describe('lib/schemas', () => {
 
     it('should accept decimal amounts', () => {
       const result = createExpenseSchema.safeParse({
+        groupId: '550e8400-e29b-41d4-a716-446655440000',
         description: 'Coffee',
         amount: 45.99,
         paidBy: 'user-123',

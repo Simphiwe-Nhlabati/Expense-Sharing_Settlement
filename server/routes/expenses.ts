@@ -2,9 +2,9 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { db } from "../db";
-import { expenses, ledgerEntries, users } from "../db/schema";
+import { expenses, ledgerEntries, users, groupMembers } from "../db/schema";
 import { runIdempotentAction } from "../middleware/idempotency";
-import { eq, and, gte, desc } from "drizzle-orm";
+import { eq, and, gte, desc, inArray } from "drizzle-orm";
 import { verifyGroupMember } from "../middleware/group-auth";
 import { logAudit } from "../services/audit";
 import { sanitize } from "../middleware/sanitization";
@@ -12,6 +12,7 @@ import { getHistoryCutoffDate } from "../services/subscription";
 import { canUserExportPdf, canUserExportCsv } from "../services/feature-flags";
 import { subscriptionMeter } from "../middleware/subscription-meter";
 import { HonoEnv } from "../types";
+import { auth } from "../middleware/auth";
 
 const app = new Hono<HonoEnv>();
 
@@ -35,73 +36,212 @@ const createExpenseSchema = z.object({
   })),
 });
 
-// POST / - Create Expense
-app.post("/", zValidator("json", createExpenseSchema), async (c) => {
-  const authId = c.get("authId");
-  const userId = await getUserIdByAuthId(authId);
-  if (!userId) return c.json({ error: "Unauthorized" }, 401);
-
-  // Use validated body from zod validator
-  const body = c.req.valid("json");
-  const idempotencyKey = c.req.header("Idempotency-Key");
-
-  if (!idempotencyKey) {
-      return c.json({ error: "Idempotency-Key header required" }, 400);
+/**
+ * Validate that all split participants belong to the specified group.
+ * Returns the list of member user IDs if valid, throws error otherwise.
+ */
+async function validateSplitParticipants(groupId: string, splitUserIds: string[]) {
+  if (splitUserIds.length === 0) {
+    throw new Error("At least one participant is required");
   }
 
-  // Use helper
-  const result = await runIdempotentAction(idempotencyKey, userId, "/expenses", body, async () => {
-    return await db.transaction(async (tx) => {
-        // 1. Create Expense Record
-        const [newExpense] = await tx.insert(expenses).values({
+  // Fetch all members of the group
+  const members = await db.select({
+    userId: groupMembers.userId,
+  }).from(groupMembers)
+    .where(eq(groupMembers.groupId, groupId));
+
+  const memberUserIds = new Set(members.map(m => m.userId));
+
+  // Check that all split participants are group members
+  const invalidUserIds = splitUserIds.filter(id => !memberUserIds.has(id));
+  if (invalidUserIds.length > 0) {
+    throw new Error(`Invalid participants: ${invalidUserIds.join(", ")}. All participants must be group members.`);
+  }
+
+  return memberUserIds;
+}
+
+/**
+ * Validate split amounts based on split type.
+ * - EQUAL: amounts are calculated, not validated
+ * - EXACT: sum of amounts must equal total
+ * - PERCENTAGE: sum of percentages must equal 100
+ */
+function validateSplitAmounts(
+  splitType: "EQUAL" | "EXACT" | "PERCENTAGE",
+  totalAmount: number,
+  splits: Array<{ userId: string; amount?: number }>
+) {
+  if (splitType === "EQUAL") {
+    // Amounts are calculated, not provided
+    return;
+  }
+
+  if (splitType === "EXACT") {
+    const sum = splits.reduce((acc, s) => acc + (s.amount || 0), 0);
+    if (sum !== totalAmount) {
+      throw new Error(`Exact split amounts must sum to total. Got ${sum}, expected ${totalAmount}`);
+    }
+    // Validate no negative amounts
+    const hasNegative = splits.some(s => (s.amount || 0) < 0);
+    if (hasNegative) {
+      throw new Error("Split amounts cannot be negative");
+    }
+  }
+
+  if (splitType === "PERCENTAGE") {
+    const sum = splits.reduce((acc, s) => acc + (s.amount || 0), 0);
+    if (sum !== 100) {
+      throw new Error(`Percentage splits must sum to 100%. Got ${sum}%`);
+    }
+  }
+}
+
+// POST / - Create Expense
+// Security: Apply auth middleware and validate group membership for all participants
+app.post("/", 
+  auth(),
+  zValidator("json", createExpenseSchema),
+  async (c) => {
+    const authId = c.get("authId");
+    if (!authId) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const userId = await getUserIdByAuthId(authId);
+    if (!userId) {
+      return c.json({ error: "Unauthorized: User not found" }, 401);
+    }
+
+    // Use validated body from zod validator
+    const body = c.req.valid("json");
+    const idempotencyKey = c.req.header("Idempotency-Key");
+
+    if (!idempotencyKey) {
+      return c.json({ error: "Idempotency-Key header required" }, 400);
+    }
+
+    // Security: Validate that the creator is a member of the group
+    const memberCheck = await db.select()
+      .from(groupMembers)
+      .where(and(
+        eq(groupMembers.groupId, body.groupId),
+        eq(groupMembers.userId, userId)
+      ))
+      .limit(1);
+
+    if (!memberCheck.length) {
+      return c.json({ error: "Forbidden: You must be a member of the group to create expenses" }, 403);
+    }
+
+    // Security: Validate all split participants belong to the same group
+    const splitUserIds = body.splits.map(s => s.userId);
+    try {
+      await validateSplitParticipants(body.groupId, splitUserIds);
+    } catch (error: any) {
+      return c.json({ error: error.message }, 400);
+    }
+
+    // Validate split amounts based on split type
+    try {
+      validateSplitAmounts(body.splitType, body.amount, body.splits);
+    } catch (error: any) {
+      return c.json({ error: error.message }, 400);
+    }
+
+    // Use helper for idempotent action
+    const result = await runIdempotentAction(idempotencyKey, userId, "/expenses", body, async () => {
+      return await db.transaction(async (tx) => {
+        try {
+          // 1. Create Expense Record
+          const [newExpense] = await tx.insert(expenses).values({
             groupId: body.groupId,
             description: sanitize(body.description),
             amount: body.amount,
             paidBy: userId,
             date: new Date(),
-        }).returning();
+          }).returning();
 
-        // 2. Calculate Splits (Logic simplification: EQUAL split)
-        const splitCount = body.splits.length;
-        const amountPerPerson = Math.floor(body.amount / splitCount);
-        let remainder = body.amount % splitCount;
+          // 2. Calculate Splits based on split type
+          let calculatedSplits: Array<{ userId: string; amount: number }> = [];
 
-        // 3. Create Ledger Entries
-        for (const split of body.splits) {
-            let share = amountPerPerson;
-            if (remainder > 0) {
+          if (body.splitType === "EQUAL") {
+            const splitCount = body.splits.length;
+            const amountPerPerson = Math.floor(body.amount / splitCount);
+            let remainder = body.amount % splitCount;
+
+            calculatedSplits = body.splits.map(split => {
+              let share = amountPerPerson;
+              if (remainder > 0) {
                 share += 1;
                 remainder -= 1;
-            }
+              }
+              return { userId: split.userId, amount: share };
+            });
+          } else if (body.splitType === "EXACT") {
+            calculatedSplits = body.splits.map(s => ({ userId: s.userId, amount: s.amount! }));
+          } else if (body.splitType === "PERCENTAGE") {
+            calculatedSplits = body.splits.map(s => {
+              const percentage = (s.amount || 0) / 100;
+              const share = Math.round(body.amount * percentage);
+              return { userId: s.userId, amount: share };
+            });
 
+            // Handle rounding: adjust last split to ensure total matches
+            const sum = calculatedSplits.reduce((acc, s) => acc + s.amount, 0);
+            if (sum !== body.amount && calculatedSplits.length > 0) {
+              const diff = body.amount - sum;
+              calculatedSplits[calculatedSplits.length - 1].amount += diff;
+            }
+          }
+
+          // 3. Create Ledger Entries
+          for (const split of calculatedSplits) {
             if (split.userId !== userId) {
-                await tx.insert(ledgerEntries).values({
-                    groupId: body.groupId,
-                    expenseId: newExpense.id,
-                    fromUserId: split.userId,
-                    toUserId: userId,
-                    amount: share,
-                    type: "EXPENSE_SHARE",
-                });
+              await tx.insert(ledgerEntries).values({
+                groupId: body.groupId,
+                expenseId: newExpense.id,
+                fromUserId: split.userId,
+                toUserId: userId,
+                amount: split.amount,
+                type: "EXPENSE_SHARE",
+              });
             }
-        }
+          }
 
-        // 4. Audit Log
-        await logAudit({
+          // 4. Audit Log
+          await logAudit({
             userId: userId,
             action: "CREATE",
             entityType: "expenses",
             entityId: newExpense.id,
-            metadata: { ip: c.req.header("x-forwarded-for"), userAgent: c.req.header("user-agent") },
+            metadata: {
+              ip: c.req.header("x-forwarded-for"),
+              userAgent: c.req.header("user-agent"),
+              splitType: body.splitType,
+              participantCount: body.splits.length,
+            },
             changes: { before: null, after: newExpense }
-        });
+          });
 
-        return newExpense;
+          return newExpense;
+        } catch (error: any) {
+          // Log transaction error for debugging
+          console.error("[EXPENSES] Transaction error:", {
+            error: error.message,
+            code: error.code,
+            userId,
+            groupId: body.groupId,
+          });
+          throw error; // Re-throw to trigger rollback
+        }
+      });
     });
-  });
 
-  return c.json(result, 201);
-});
+    return c.json(result, 201);
+  }
+);
 
 // GET /:groupId
 app.get("/:groupId", verifyGroupMember(), async (c) => {

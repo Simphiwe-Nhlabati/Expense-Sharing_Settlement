@@ -31,6 +31,28 @@ const signInSchema = z.object({
   password: z.string(),
 });
 
+/**
+ * Set authentication cookies with secure configuration.
+ * Tokens are NOT returned in JSON body to prevent XSS token exfiltration.
+ */
+function setAuthCookies(c: any, accessToken: string, refreshToken: string) {
+  setCookie(c, "access_token", accessToken, {
+    httpOnly: true,
+    secure: COOKIE_SECURE,
+    sameSite: "Lax",
+    maxAge: ACCESS_TOKEN_MAX_AGE,
+    path: "/",
+  });
+
+  setCookie(c, "refresh_token", refreshToken, {
+    httpOnly: true,
+    secure: COOKIE_SECURE,
+    sameSite: "Lax",
+    maxAge: REFRESH_TOKEN_MAX_AGE,
+    path: "/",
+  });
+}
+
 // POST /auth/sign-up
 app.post("/sign-up", zValidator("json", signUpSchema), async (c) => {
   try {
@@ -58,22 +80,11 @@ app.post("/sign-up", zValidator("json", signUpSchema), async (c) => {
     const accessToken = await generateAccessToken(authId, email.toLowerCase());
     const refreshToken = await generateRefreshToken(authId);
 
-    setCookie(c, "access_token", accessToken, {
-      httpOnly: true,
-      secure: COOKIE_SECURE,
-      sameSite: "Lax",
-      maxAge: ACCESS_TOKEN_MAX_AGE,
-      path: "/",
-    });
+    // Set secure HTTP-only cookies
+    setAuthCookies(c, accessToken, refreshToken);
 
-    setCookie(c, "refresh_token", refreshToken, {
-      httpOnly: true,
-      secure: COOKIE_SECURE,
-      sameSite: "Lax",
-      maxAge: REFRESH_TOKEN_MAX_AGE,
-      path: "/",
-    });
-
+    // SECURITY: Do NOT return tokens in JSON body
+    // Tokens are stored exclusively in HTTP-only cookies to prevent XSS exfiltration
     return c.json({
       success: true,
       user: {
@@ -81,10 +92,9 @@ app.post("/sign-up", zValidator("json", signUpSchema), async (c) => {
         email: newUser.email,
         fullName: newUser.fullName,
       },
-      accessToken,
-      refreshToken,
     });
   } catch (error) {
+    console.error("[AUTH] Sign up error:", error);
     return c.json({ error: "Failed to create account" }, 500);
   }
 });
@@ -103,8 +113,7 @@ app.post("/sign-in", zValidator("json", signInSchema), async (c) => {
       return c.json({ error: "Invalid email or password" }, 401);
     }
 
-    // Verify password (you'll need to store password hash in a separate table)
-    // For now, this is a placeholder - you need to implement password storage
+    // Verify password
     const validPassword = await verifyPassword(password, user.passwordHash || "");
 
     if (!validPassword) {
@@ -115,23 +124,11 @@ app.post("/sign-in", zValidator("json", signInSchema), async (c) => {
     const accessToken = await generateAccessToken(user.authId, user.email);
     const refreshToken = await generateRefreshToken(user.authId);
 
-    // Set cookies
-    setCookie(c, "access_token", accessToken, {
-      httpOnly: true,
-      secure: COOKIE_SECURE,
-      sameSite: "Lax",
-      maxAge: ACCESS_TOKEN_MAX_AGE,
-      path: "/",
-    });
+    // Set secure HTTP-only cookies
+    setAuthCookies(c, accessToken, refreshToken);
 
-    setCookie(c, "refresh_token", refreshToken, {
-      httpOnly: true,
-      secure: COOKIE_SECURE,
-      sameSite: "Lax",
-      maxAge: REFRESH_TOKEN_MAX_AGE,
-      path: "/",
-    });
-
+    // SECURITY: Do NOT return tokens in JSON body
+    // Tokens are stored exclusively in HTTP-only cookies to prevent XSS exfiltration
     return c.json({
       success: true,
       user: {
@@ -139,8 +136,6 @@ app.post("/sign-in", zValidator("json", signInSchema), async (c) => {
         email: user.email,
         fullName: user.fullName,
       },
-      accessToken,
-      refreshToken,
     });
   } catch (error) {
     console.error("[AUTH] Sign in error:", error);

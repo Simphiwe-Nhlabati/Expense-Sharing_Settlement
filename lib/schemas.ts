@@ -3,7 +3,7 @@ import { z } from "zod"
 export const createGroupSchema = z.object({
   name: z.string().min(2, "Group name must be at least 2 characters."),
   description: z.string().optional(),
-  currency: z.enum(["ZAR", "USD", "EUR"]),
+  currency: z.enum(["ZAR", "USD", "EUR"]).default("ZAR"),
 })
 
 export const createExpenseSchema = z.object({
@@ -11,7 +11,7 @@ export const createExpenseSchema = z.object({
   description: z.string().min(2, "Description is required"),
   amount: z.number().positive("Amount must be greater than 0"),
   paidBy: z.string().min(1, "Payer is required"),
-  date: z.date(),
+  date: z.date().default(() => new Date()),
 })
 
 export type CreateGroupInput = z.infer<typeof createGroupSchema>

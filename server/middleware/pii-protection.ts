@@ -1,18 +1,63 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { z } from "zod";
 
 /**
  * POPIA Compliance: PII Protection Utilities
  * For handling South African personal information securely
+ * 
+ * Security features:
+ * - HMAC-SHA256 with environment-managed secret key (not plain SHA-256)
+ * - Key versioning support for future rotation
+ * - Constant-time comparison for hash verification
  */
 
+// Get HMAC secret from environment (with fallback for development)
+const HMAC_SECRET = process.env.PII_HMAC_SECRET || process.env.JWT_SECRET || "dev-fallback-secret-do-not-use-in-prod";
+const CURRENT_KEY_VERSION = "v1";
+
 /**
- * Hash sensitive PII data using SHA-256
- * Use this for storing ID numbers, phone numbers when not needed in plain text
+ * Hash sensitive PII data using HMAC-SHA256 with keyed salt.
+ * More secure than plain SHA-256 as it requires the secret key to verify.
+ * 
+ * @param data - The PII data to hash
+ * @param version - Optional key version for future rotation support
+ * @returns Hex-encoded HMAC hash with version prefix
  */
-export function hashPII(data: string): string {
+export function hashPII(data: string, version: string = CURRENT_KEY_VERSION): string {
   if (!data) return "";
-  return createHash("sha256").update(data.trim()).digest("hex");
+  const trimmed = data.trim();
+  const hmac = createHmac("sha256", `${HMAC_SECRET}:${version}`);
+  const hash = hmac.update(trimmed).digest("hex");
+  // Prefix with version for future rotation support
+  return `${version}:${hash}`;
+}
+
+/**
+ * Verify PII data against a stored hash.
+ * Uses constant-time comparison to prevent timing attacks.
+ * 
+ * @param data - The PII data to verify
+ * @param storedHash - The stored hash (with version prefix)
+ * @returns True if the data matches the hash
+ */
+export function verifyPII(data: string, storedHash: string): boolean {
+  if (!data || !storedHash) return false;
+  
+  // Extract version from stored hash
+  const parts = storedHash.split(":");
+  if (parts.length !== 2) return false;
+  
+  const version = parts[0];
+  const hashToCompare = parts[1];
+  
+  // Generate hash with same version
+  const computedHash = hashPII(data, version).split(":")[1];
+  
+  // Constant-time comparison to prevent timing attacks
+  return crypto.timingSafeEqual(
+    Buffer.from(computedHash, "hex"),
+    Buffer.from(hashToCompare, "hex")
+  );
 }
 
 /**
@@ -148,4 +193,21 @@ export function validatePII(data: { saIdNumber?: string; phoneNumber?: string })
     isValid: errors.length === 0,
     errors,
   };
+}
+
+/**
+ * Key rotation helper - re-hash data with new key version.
+ * Call this during migration when rotating HMAC secrets.
+ * 
+ * @param oldHash - The old hash (with version prefix)
+ * @param plainData - The original plain text data (must be available)
+ * @param newVersion - The new version identifier
+ * @returns New hash with updated version
+ */
+export function rotatePIIHash(oldHash: string, plainData: string, newVersion: string): string {
+  // Verify old hash first
+  if (!verifyPII(plainData, oldHash)) {
+    throw new Error("Cannot rotate: old hash verification failed");
+  }
+  return hashPII(plainData, newVersion);
 }

@@ -21,6 +21,9 @@ const xssFilter = new FilterXSS({
 /**
  * Sanitize text input to prevent XSS attacks
  * Use this for all user-provided text fields
+ * 
+ * @param text - The text to sanitize
+ * @returns Sanitized text with XSS vectors removed
  */
 export function sanitize(text: string): string {
   if (!text) return text;
@@ -29,8 +32,34 @@ export function sanitize(text: string): string {
 }
 
 /**
- * Middleware to sanitize all string fields in JSON body
- * Stores sanitized data in context for handlers to use
+ * Recursively sanitize nested objects and arrays
+ */
+function sanitizeObject(obj: unknown): unknown {
+  if (typeof obj === "string") {
+    return sanitize(obj);
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => sanitizeObject(item));
+  }
+  if (typeof obj === "object" && obj !== null) {
+    const sanitized: Record<string, unknown> = {};
+    const typedObj = obj as Record<string, unknown>;
+    for (const key in typedObj) {
+      if (Object.prototype.hasOwnProperty.call(typedObj, key)) {
+        sanitized[key] = sanitizeObject(typedObj[key]);
+      }
+    }
+    return sanitized;
+  }
+  return obj;
+}
+
+/**
+ * Middleware to sanitize all string fields in JSON body.
+ * Stores sanitized data in context for handlers to use.
+ * 
+ * IMPORTANT: Handlers should read from c.get("sanitizedBody") 
+ * OR use the sanitize() function directly on validated data.
  */
 export const sanitizeBody = () =>
   createMiddleware(async (c, next) => {
@@ -55,6 +84,8 @@ export const sanitizeBody = () =>
         }
       }
 
+      // Store sanitized body in context
+      // Handlers must read from context, not from c.req.valid("json")
       c.set("sanitizedBody", sanitized);
     } catch (error) {
       // Invalid JSON, let the request fail naturally
@@ -66,24 +97,25 @@ export const sanitizeBody = () =>
   });
 
 /**
- * Recursively sanitize nested objects
+ * Helper to get sanitized body from context.
+ * Use this in handlers instead of c.req.valid("json") when sanitization is needed.
+ * 
+ * @param c - Hono context
+ * @returns Sanitized body or null if not available
  */
-function sanitizeObject(obj: unknown): unknown {
-  if (typeof obj === "string") {
-    return sanitize(obj);
-  }
-  if (Array.isArray(obj)) {
-    return obj.map((item) => sanitizeObject(item));
-  }
-  if (typeof obj === "object" && obj !== null) {
-    const sanitized: Record<string, unknown> = {};
-    const typedObj = obj as Record<string, unknown>;
-    for (const key in typedObj) {
-      if (Object.prototype.hasOwnProperty.call(typedObj, key)) {
-        sanitized[key] = sanitizeObject(typedObj[key]);
-      }
-    }
-    return sanitized;
-  }
-  return obj;
+export function getSanitizedBody<T>(c: any): T | null {
+  return c.get("sanitizedBody") as T | null;
+}
+
+/**
+ * Zod transform helper to sanitize string fields in schema validation.
+ * Use this in Zod schemas to automatically sanitize during validation.
+ * 
+ * Example:
+ * z.object({
+ *   description: z.string().transform(sanitizeString)
+ * })
+ */
+export function sanitizeString(value: string): string {
+  return sanitize(value);
 }

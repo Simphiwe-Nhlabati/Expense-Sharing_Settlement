@@ -1,6 +1,18 @@
 import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Create a default QueryClient for tests
+const createTestQueryClient = () => {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+};
 
 // Mock next-themes
 vi.mock('next-themes', () => ({
@@ -31,6 +43,14 @@ vi.mock('@/lib/utils', () => ({
       maximumFractionDigits: 2,
     }).format(amountInCents / 100);
   },
+  formatZarAmount: (amountInCents: number) => {
+    return new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amountInCents / 100);
+  },
 }));
 
 // Mock sonner toast
@@ -48,14 +68,15 @@ vi.mock('uuid', () => ({
   v4: () => 'test-uuid-1234',
 }));
 
-// Mock @/app/actions/auth
-vi.mock('@/app/actions/auth', () => ({
-  getAuthenticatedUser: vi.fn().mockResolvedValue({
-    id: 'test-user-id',
-    authId: 'test-auth-id',
-    email: 'test@example.com',
-    fullName: 'Test User',
-    avatarUrl: 'https://example.com/avatar.png',
-  }),
-  ensureUserSynced: vi.fn().mockResolvedValue({ success: true }),
-}));
+// Mock @/app/actions/auth - return null by default, tests can override
+vi.mock('@/app/actions/auth', async () => {
+  const actual = await vi.importActual('@/app/actions/auth');
+  return {
+    ...(actual as object),
+    getAuthenticatedUser: vi.fn().mockResolvedValue(null),
+    ensureUserSynced: vi.fn().mockResolvedValue({ success: true }),
+  };
+});
+
+// Export test utilities
+export { createTestQueryClient };
