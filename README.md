@@ -736,3 +736,8 @@ For issues and questions:
 *ZAR Ledger © 2026 - Empowering Financial Collaboration*
 
 </div>
+
+## CI/CD
+
+See [`docs/CI_CD.md`](docs/CI_CD.md) for the fintech-focused CI/CD strategy, including quality gates, security scanning, and production deployment workflow.
+
