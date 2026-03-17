@@ -58,9 +58,7 @@ jobs:
       - name: Deploy with Vercel
         id: deploy
         run: |
-          bunx vercel pull --yes --environment=production --token="${VERCEL_TOKEN}"
-          bunx vercel build --prod --token="${VERCEL_TOKEN}"
-          DEPLOY_URL=$(bunx vercel deploy --prebuilt --prod --token="${VERCEL_TOKEN}")
+          DEPLOY_URL=$(bunx vercel deploy --prod --token="${VERCEL_TOKEN}")
           echo "url=${DEPLOY_URL}" >> "$GITHUB_OUTPUT"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

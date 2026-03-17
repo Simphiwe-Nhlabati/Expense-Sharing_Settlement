@@ -38,12 +38,12 @@ export default async function Home() {
                   <div className="absolute inset-0 bg-mesh opacity-50" />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-2">
-                          Welcome Back
-                        </h1>
-                        <p className="text-white/80 text-lg">Manage your expenses with precision</p>
-                      </div>
+                       <div>
+                         <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-2" style={{fontFamily: 'var(--font-display)'}}>
+                           Welcome Back
+                         </h1>
+                         <p className="text-white/80 text-lg font-medium">Manage your expenses with precision</p>
+                       </div>
                       <div className="hidden md:flex gap-2">
                         <JoinGroupDialog />
                         <CreateGroupDialog />
@@ -94,8 +94,8 @@ export default async function Home() {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                      <div>
-                       <h2 className="text-2xl font-bold tracking-tight">Your Groups</h2>
-                       <p className="text-muted-foreground">Collaborate and split expenses with your circle</p>
+                       <h2 className="heading-section">Your Groups</h2>
+                       <p className="text-muted-foreground text-base">Collaborate and split expenses with your circle</p>
                      </div>
                      <div className="flex gap-2 md:hidden">
                         <JoinGroupDialog />
@@ -132,11 +132,11 @@ export default async function Home() {
                 </div>
 
                 {/* Main headline */}
-                <h1 className="font-heading text-5xl font-extrabold tracking-tight sm:text-6xl md:text-7xl lg:text-8xl leading-tight animate-fade-in text-white drop-shadow-lg">
-                  Split Expenses with{" "}
-                  <span className="text-emerald-300 drop-shadow-md">Precision</span>{" "}
-                  and{" "}
-                  <span className="text-amber-200 drop-shadow-md">Trust</span>
+                <h1 className="heading-display text-white drop-shadow-lg animate-fade-in">
+                   Split Expenses with{" "}
+                   <span className="bg-gradient-emerald bg-clip-text text-transparent">Precision</span>{" "}
+                   and{" "}
+                   <span className="bg-gradient-coral bg-clip-text text-transparent">Trust</span>
                 </h1>
 
                 {/* Subheadline */}
@@ -183,8 +183,8 @@ export default async function Home() {
           <section className="relative py-20 md:py-28 bg-secondary/50">
             <div className="container mx-auto px-4 relative">
               <div className="mx-auto max-w-4xl text-center space-y-4 mb-16">
-                <h2 className="font-heading text-4xl md:text-5xl font-bold tracking-tight">
-                  Built for <span className="text-gradient">Trust</span>
+                <h2 className="heading-section">
+                   Built for <span className="text-gradient">Trust</span>
                 </h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                   Unlike other apps, we handle the complexity of South African banking logic
@@ -245,7 +245,7 @@ export default async function Home() {
               <div className="relative max-w-4xl mx-auto rounded-3xl bg-gradient-primary p-12 md:p-16 overflow-hidden text-center">
                 <div className="absolute inset-0 bg-mesh opacity-15" />
                 <div className="relative z-10 space-y-6">
-                  <h2 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">
+                  <h2 className="heading-section text-white drop-shadow-lg">
                     Ready to settle with precision?
                   </h2>
                   <p className="text-lg text-white/90 drop-shadow-sm max-w-xl mx-auto">
