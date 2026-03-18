@@ -13,7 +13,6 @@
  */
 
 import { Hono } from "hono";
-import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { prettyJSON } from "hono/pretty-json";
 import { secureHeaders } from "hono/secure-headers";
@@ -144,7 +143,10 @@ const port = process.env.BACKEND_PORT || 3001;
 console.log(`🚀 Backend server starting on http://localhost:${port}`);
 console.log(`   Health check: http://localhost:${port}/api/health`);
 
-export default {
+const server = {
   port,
   fetch: app.fetch,
 };
+
+export { server };
+export default server;

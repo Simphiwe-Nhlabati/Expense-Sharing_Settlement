@@ -67,7 +67,7 @@ export async function verifyAccessToken(token: string): Promise<JWTPayload | nul
       iat: payload.iat as number | undefined,
       exp: payload.exp as number | undefined,
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -79,7 +79,7 @@ export async function verifyRefreshToken(token: string): Promise<{ userId: strin
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return { userId: payload.userId as string };
-  } catch (error) {
+  } catch {
     return null;
   }
 }

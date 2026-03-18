@@ -38,6 +38,8 @@ yarn-error.log*
 
 core_features.txt
 
+ci_pipline-issues
+
 scripts
 
 # vercel

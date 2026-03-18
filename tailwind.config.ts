@@ -1,7 +1,11 @@
-module.exports = {
+import type { Config } from "tailwindcss"
+
+const config: Config = {
     darkMode: ["class"],
     theme: {
         extend: {},
     },
-    plugins: [require("tailwindcss-animate")],
-};
+    plugins: [],
+}
+
+export default config

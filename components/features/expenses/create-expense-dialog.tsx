@@ -70,7 +70,7 @@ export function CreateExpenseDialog({ groupId, members = [] }: CreateExpenseDial
       } else {
         toast.error(result.error as string)
       }
-    } catch (error) {
+    } catch {
        toast.error("Something went wrong")
     } finally {
       setIsPending(false)

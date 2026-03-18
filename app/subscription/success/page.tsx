@@ -17,9 +17,8 @@ export default function SubscriptionSuccessPage() {
 
   useEffect(() => {
     const reference = searchParams.get("reference");
-    
+
     if (!reference) {
-      setProcessing(false);
       return;
     }
 
@@ -65,7 +64,7 @@ export default function SubscriptionSuccessPage() {
                 <XCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
                 <CardTitle>Payment Verification Failed</CardTitle>
                 <CardDescription>
-                  We couldn't verify your payment. Please contact support if you were charged.
+                  We couldn&apos;t verify your payment. Please contact support if you were charged.
                 </CardDescription>
               </>
             )}

@@ -4,12 +4,11 @@ import { zValidator } from "@hono/zod-validator";
 import { db } from "../db";
 import { expenses, ledgerEntries, users, groupMembers } from "../db/schema";
 import { runIdempotentAction } from "../middleware/idempotency";
-import { eq, and, gte, desc, inArray } from "drizzle-orm";
+import { eq, and, gte, desc } from "drizzle-orm";
 import { verifyGroupMember } from "../middleware/group-auth";
 import { logAudit } from "../services/audit";
 import { sanitize } from "../middleware/sanitization";
 import { getHistoryCutoffDate } from "../services/subscription";
-import { canUserExportPdf, canUserExportCsv } from "../services/feature-flags";
 import { subscriptionMeter } from "../middleware/subscription-meter";
 import { HonoEnv } from "../types";
 import { auth } from "../middleware/auth";
@@ -139,15 +138,15 @@ app.post("/",
     const splitUserIds = body.splits.map(s => s.userId);
     try {
       await validateSplitParticipants(body.groupId, splitUserIds);
-    } catch (error: any) {
-      return c.json({ error: error.message }, 400);
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "Validation failed" }, 400);
     }
 
     // Validate split amounts based on split type
     try {
       validateSplitAmounts(body.splitType, body.amount, body.splits);
-    } catch (error: any) {
-      return c.json({ error: error.message }, 400);
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "Validation failed" }, 400);
     }
 
     // Use helper for idempotent action
@@ -226,11 +225,10 @@ app.post("/",
           });
 
           return newExpense;
-        } catch (error: any) {
+        } catch (error) {
           // Log transaction error for debugging
           console.error("[EXPENSES] Transaction error:", {
-            error: error.message,
-            code: error.code,
+            error: error instanceof Error ? error.message : "Unknown error",
             userId,
             groupId: body.groupId,
           });
@@ -255,9 +253,9 @@ app.get("/:groupId", verifyGroupMember(), async (c) => {
     // Apply history cutoff based on subscription tier
     const historyCutoff = await getHistoryCutoffDate(userId);
 
-    const whereConditions: any[] = [
+    const whereConditions = [
         eq(expenses.groupId, groupId),
-        eq(expenses.deletedAt, null as any)
+        eq(expenses.deletedAt, null)
     ];
 
     if (historyCutoff) {
@@ -293,7 +291,7 @@ app.get("/:groupId/export/pdf", subscriptionMeter("FEATURE", "pdf_export"), veri
     const groupExpenses = await db.query.expenses.findMany({
         where: and(
             eq(expenses.groupId, groupId),
-            eq(expenses.deletedAt, null as any)
+            eq(expenses.deletedAt, null)
         ),
         orderBy: [desc(expenses.date)],
         with: {
@@ -328,7 +326,7 @@ app.get("/:groupId/export/csv", subscriptionMeter("FEATURE", "csv_xero_export"),
     const groupExpenses = await db.query.expenses.findMany({
         where: and(
             eq(expenses.groupId, groupId),
-            eq(expenses.deletedAt, null as any)
+            eq(expenses.deletedAt, null)
         ),
         orderBy: [desc(expenses.date)],
         with: {

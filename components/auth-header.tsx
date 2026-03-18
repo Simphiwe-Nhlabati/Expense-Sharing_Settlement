@@ -2,18 +2,15 @@
 
 import Link from "next/link"
 import { ModeToggle } from "@/components/mode-toggle"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { User, LogOut, LayoutDashboard } from "lucide-react"
 
 export function AuthHeader() {
   const { isAuthenticated, isLoading, setUser, logout, accessToken } = useAuthStore()
-  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    setIsMounted(true)
-
     // Check authentication status on mount
     const checkAuth = async () => {
       try {
@@ -29,7 +26,7 @@ export function AuthHeader() {
         } else {
           setUser(null)
         }
-      } catch (error) {
+      } catch {
         setUser(null)
       }
     }
@@ -45,26 +42,6 @@ export function AuthHeader() {
     } catch (error) {
       console.error("Sign out error:", error)
     }
-  }
-
-  // During SSR or before mount, show loading state
-  if (!isMounted) {
-    return (
-      <header className="sticky top-0 z-50 w-full border-b bg-glass backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
-        <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <span className="text-xs font-bold text-primary-foreground">Z</span>
-            </div>
-            <h1 className="text-lg font-bold text-gradient">ZAR Ledger</h1>
-          </Link>
-          <div className="flex items-center gap-4">
-            <div className="h-8 w-20 bg-muted animate-pulse rounded-full" />
-            <ModeToggle />
-          </div>
-        </div>
-      </header>
-    )
   }
 
   return (

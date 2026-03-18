@@ -115,8 +115,8 @@ app.post("/upgrade", zValidator("json", upgradeSchema), async (c) => {
     if (paidTier && paidTier !== tier) {
       return c.json({ error: "Tier mismatch", message: `Paid for ${paidTier} but requested ${tier}` }, 400);
     }
-  } catch (error: any) {
-    return c.json({ error: "Payment verification failed", message: error.message }, 400);
+  } catch (error) {
+    return c.json({ error: "Payment verification failed", message: error instanceof Error ? error.message : "Unknown error" }, 400);
   }
 
   const updated = await upgradeUserSubscription(userId, tier, paymentProviderSubscriptionId);
@@ -266,9 +266,9 @@ app.post("/webhook", async (c) => {
       message: "Webhook processed successfully",
       event: eventType,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Webhook processing failed:", error);
-    return c.json({ error: "Webhook processing failed", message: error.message }, 500);
+    return c.json({ error: "Webhook processing failed", message: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 });
 

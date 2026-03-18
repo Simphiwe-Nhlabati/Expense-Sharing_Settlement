@@ -1,7 +1,7 @@
 import { createMiddleware } from "hono/factory";
 import { db } from "../db";
 import { idempotencyKeys } from "../db/schema";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import { addMinutes } from "date-fns";
 import { createHash } from "node:crypto";
 
@@ -56,7 +56,7 @@ export const idempotency = () =>
       }
 
       // Return cached response
-      return c.json(existingKey.responseBody, existingKey.responseCode as any);
+      return c.json(existingKey.responseBody, existingKey.responseCode);
     }
 
     await next();
@@ -121,12 +121,12 @@ export async function runIdempotentAction<T>(
       path,
       params: bodyHash, // Store body hash for fingerprint verification
       responseCode: 200,
-      responseBody: result as any,
+      responseBody: result as unknown as Record<string, unknown>,
       expiresAt: addMinutes(new Date(), IDEMPOTENCY_KEY_TTL_MINUTES),
     });
-  } catch (error: any) {
+  } catch (error) {
     // Handle race condition: another request might have inserted the same key
-    if (error.code === "23505") {
+    if (error instanceof Error && "code" in error && error.code === "23505") {
       // Unique violation - fetch and return the existing response
       const existingKey = await db.query.idempotencyKeys.findFirst({
         where: eq(idempotencyKeys.key, scopedKey),

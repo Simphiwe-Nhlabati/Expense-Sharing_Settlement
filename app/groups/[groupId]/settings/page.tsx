@@ -73,7 +73,7 @@ export default async function GroupSettingsPage(props: { params: Promise<{ group
                     <CardDescription>Current members of this group.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                   {group.members.map((member: any) => (
+                   {group.members.map((member) => (
                        <div key={member.id} className="flex items-center justify-between p-3 border rounded-md">
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary text-xs">

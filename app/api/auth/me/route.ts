@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
     const data = await backendResponse.json()
     return NextResponse.json(data)
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to get user info" },
       { status: 500 }

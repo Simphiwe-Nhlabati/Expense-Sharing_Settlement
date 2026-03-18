@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createGroupSchema, type CreateGroupInput } from "@/lib/schemas"
 import { db } from "@/server/db"
 import { groups, groupMembers, users } from "@/server/db/schema"
-import { eq, and, desc, sql } from "drizzle-orm"
+import { eq, and, desc } from "drizzle-orm"
 import { getAuthenticatedUser } from "./auth"
 import { generateInviteCode } from "@/lib/invite-code"
 import { logAudit } from "@/server/services/audit"
@@ -128,7 +128,7 @@ export async function createGroup(input: CreateGroupInput) {
       revalidatePath("/")
       revalidatePath("/groups")
       return { success: true, data: newGroup }
-  } catch (error) {
+  } catch {
       return { success: false, error: "Failed to create group. Please try again." }
   }
 }
@@ -148,7 +148,7 @@ export async function joinGroupByCode(inviteCode: string) {
   const group = await db.query.groups.findFirst({
       where: and(
           eq(groups.inviteCode, code),
-          eq(groups.deletedAt, null as any)
+          eq(groups.deletedAt, null)
       )
   });
 

@@ -1,6 +1,6 @@
 import { db } from "../db";
-import { subscriptions, users, groupMembers, groups, SubscriptionTier, SUBSCRIPTION_TIERS } from "../db/schema";
-import { eq, and, count, sql } from "drizzle-orm";
+import { subscriptions, groupMembers, groups, SubscriptionTier, SUBSCRIPTION_TIERS } from "../db/schema";
+import { eq, and, count } from "drizzle-orm";
 
 /**
  * Get or create a user's subscription
@@ -59,7 +59,7 @@ export async function countUserGroups(userId: string): Promise<number> {
     .innerJoin(groups, eq(groups.id, groupMembers.groupId))
     .where(and(
       eq(groupMembers.userId, userId),
-      eq(groups.deletedAt, null as any)
+      eq(groups.deletedAt, null)
     ));
 
   return result[0]?.count ?? 0;
@@ -155,7 +155,7 @@ export async function upgradeUserSubscription(
   newTier: SubscriptionTier,
   paymentProviderSubscriptionId?: string
 ) {
-  const existing = await getOrCreateUserSubscription(userId);
+  await getOrCreateUserSubscription(userId);
 
   const [updated] = await db.update(subscriptions)
     .set({
@@ -176,7 +176,7 @@ export async function upgradeUserSubscription(
  * Cancel user's subscription (at period end)
  */
 export async function cancelUserSubscription(userId: string) {
-  const existing = await getOrCreateUserSubscription(userId);
+  await getOrCreateUserSubscription(userId);
 
   const [updated] = await db.update(subscriptions)
     .set({
@@ -209,7 +209,7 @@ export async function processPaymentWebhook(
   }
 
   let newStatus: string = existing.status;
-  let cancelAtPeriodEnd = existing.cancelAtPeriodEnd;
+  const cancelAtPeriodEnd = existing.cancelAtPeriodEnd;
 
   switch (eventType) {
     case "customer.subscription.created":

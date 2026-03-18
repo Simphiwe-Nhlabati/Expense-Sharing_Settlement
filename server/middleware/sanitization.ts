@@ -1,5 +1,5 @@
 import { createMiddleware } from "hono/factory";
-import filterXSS, { FilterXSS } from "xss";
+import { FilterXSS } from "xss";
 
 // Initialize XSS filter with strict settings
 // No HTML tags allowed for financial data inputs
@@ -87,7 +87,7 @@ export const sanitizeBody = () =>
       // Store sanitized body in context
       // Handlers must read from context, not from c.req.valid("json")
       c.set("sanitizedBody", sanitized);
-    } catch (error) {
+    } catch {
       // Invalid JSON, let the request fail naturally
       await next();
       return;
@@ -99,12 +99,13 @@ export const sanitizeBody = () =>
 /**
  * Helper to get sanitized body from context.
  * Use this in handlers instead of c.req.valid("json") when sanitization is needed.
- * 
+ *
  * @param c - Hono context
  * @returns Sanitized body or null if not available
  */
-export function getSanitizedBody<T>(c: any): T | null {
-  return c.get("sanitizedBody") as T | null;
+export function getSanitizedBody<T>(c: unknown): T | null {
+  const context = c as { get: (key: string) => unknown };
+  return context.get("sanitizedBody") as T | null;
 }
 
 /**

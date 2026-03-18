@@ -1,5 +1,3 @@
-"use client"
-
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -8,7 +6,16 @@ import { Users, Banknote, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { formatZarAmount } from "@/lib/utils"
 
-async function fetchGroups(): Promise<any[]> {
+interface Group {
+  id: string;
+  name: string;
+  description: string | null;
+  currency: string;
+  members: number;
+  balance: number;
+}
+
+async function fetchGroups(): Promise<Group[]> {
   const response = await fetch("/api/groups", {
     method: "GET",
     headers: {

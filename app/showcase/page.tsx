@@ -40,7 +40,7 @@ export default function ShowcasePage() {
             <div>
               <p className="label-mono mb-2">Body Text</p>
               <p className="text-base text-foreground">
-                This is regular body text. It's used for descriptions, explanations, and content that needs to be read carefully.
+                This is regular body text. It&apos;s used for descriptions, explanations, and content that needs to be read carefully.
               </p>
             </div>
             

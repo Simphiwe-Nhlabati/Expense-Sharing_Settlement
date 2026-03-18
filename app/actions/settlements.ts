@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { db } from "@/server/db"
-import { ledgerEntries, groups, users } from "@/server/db/schema"
-import { eq, and, desc, sql } from "drizzle-orm"
+import { ledgerEntries, users } from "@/server/db/schema"
+import { eq, and } from "drizzle-orm"
 import { getAuthenticatedUser } from "./auth"
 
 import { logAudit } from "@/server/services/audit"

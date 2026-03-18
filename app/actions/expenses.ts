@@ -1,15 +1,19 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { createExpenseSchema, type CreateExpenseInput } from "@/lib/schemas"
+import { createExpenseSchema } from "@/lib/schemas"
 import { db } from "@/server/db"
 import { expenses, ledgerEntries, groupMembers, users } from "@/server/db/schema"
 import { getAuthenticatedUser } from "./auth"
-import { eq, desc, and, isNull } from "drizzle-orm"
-import { v4 as uuidv4 } from "uuid"
+import { eq } from "drizzle-orm"
+
+interface CreateExpenseResult {
+  success: boolean;
+  error?: string;
+}
 
 // Helper to create expense
-export async function createExpense(input: any) {
+export async function createExpense(input: CreateExpenseInput): Promise<CreateExpenseResult> {
   const user = await getAuthenticatedUser()
   
   if (!user) {
@@ -22,7 +26,7 @@ export async function createExpense(input: any) {
       return { success: false, error: "Invalid input" };
   }
 
-  const { groupId, description, amount, paidBy, date } = result.data;
+  const { groupId, description, amount, date } = result.data;
   const amountInCents = Math.round(Number(amount) * 100);
 
   try {
@@ -77,7 +81,6 @@ export async function getExpenses(groupId: string) {
       description: expenses.description,
       amount: expenses.amount,
       date: expenses.date,
-      paidBy: users.fullName,
       paidById: expenses.paidBy,
   })
   .from(expenses)

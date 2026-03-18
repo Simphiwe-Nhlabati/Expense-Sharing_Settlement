@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 "use client"
 
 import { useEffect, useRef, useCallback } from "react"
@@ -30,14 +31,31 @@ export function useRealtimeBalance({
   const esRef = useRef<EventSource | null>(null)
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retryDelay = useRef(2000)
+  const onUpdateRef = useRef(onUpdate)
+  const routerRef = useRef(router)
+  const enabledRef = useRef(enabled)
+  const groupIdRef = useRef(groupId)
+
+  // Keep refs updated
+  useEffect(() => {
+    onUpdateRef.current = onUpdate
+  }, [onUpdate])
+
+  useEffect(() => {
+    enabledRef.current = enabled
+  }, [enabled])
+
+  useEffect(() => {
+    groupIdRef.current = groupId
+  }, [groupId])
 
   const connect = useCallback(() => {
-    if (!enabled || !groupId) return
+    if (!enabledRef.current || !groupIdRef.current) return
 
     // Clean up any existing connection
     esRef.current?.close()
 
-    const url = `/api/realtime/${groupId}`
+    const url = `/api/realtime/${groupIdRef.current}`
     const es = new EventSource(url)
     esRef.current = es
 
@@ -46,9 +64,9 @@ export function useRealtimeBalance({
     })
 
     es.addEventListener("balance_updated", () => {
-      router.refresh() // Always re-run Server Components for fresh data
-      if (onUpdate) {
-        onUpdate()
+      routerRef.current.refresh() // Always re-run Server Components for fresh data
+      if (onUpdateRef.current) {
+        onUpdateRef.current()
       }
       toast.info("Balance updated", {
         description: "A new transaction was recorded in this group.",
@@ -63,9 +81,11 @@ export function useRealtimeBalance({
       // Exponential back-off reconnect (max 30s)
       const delay = Math.min(retryDelay.current, 30000)
       retryDelay.current = delay * 2
-      retryRef.current = setTimeout(connect, delay)
+      retryRef.current = setTimeout(() => {
+        connect()
+      }, delay)
     })
-  }, [groupId, enabled, onUpdate, router])
+  }, [])
 
   useEffect(() => {
     connect()

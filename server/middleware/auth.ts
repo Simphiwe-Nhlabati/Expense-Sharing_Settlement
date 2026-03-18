@@ -31,7 +31,7 @@ export const auth = () =>
       c.set("userEmail", payload.email);
 
       await next();
-    } catch (error) {
+    } catch {
       return c.json({ error: "Unauthorized", message: "Authentication failed" }, 401);
     }
   });
@@ -63,7 +63,7 @@ export const optionalAuth = () =>
       }
 
       await next();
-    } catch (error) {
+    } catch {
       // Silently continue - optional auth
       await next();
     }

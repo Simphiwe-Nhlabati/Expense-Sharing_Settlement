@@ -68,7 +68,7 @@ export function CreateGroupDialog() {
       } else {
         toast.error(result.error || "Failed to create group")
       }
-    } catch (error) {
+    } catch {
       toast.error("An unexpected error occurred. Please try again.")
     }
   }

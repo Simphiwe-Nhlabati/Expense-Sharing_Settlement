@@ -1,8 +1,8 @@
 "use server"
 
 import { db } from "@/server/db"
-import { ledgerEntries, groups } from "@/server/db/schema"
-import { eq, sum, and, sql } from "drizzle-orm"
+import { ledgerEntries } from "@/server/db/schema"
+import { eq } from "drizzle-orm"
 import { getAuthenticatedUser } from "./auth"
 
 export async function getDashboardStats() {

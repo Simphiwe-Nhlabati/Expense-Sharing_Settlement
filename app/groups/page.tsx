@@ -1,5 +1,4 @@
 import { AuthHeader } from "@/components/auth-header";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreateGroupDialog } from "@/components/features/groups/create-group-dialog";
 import { GroupList } from "@/components/features/groups/group-list";

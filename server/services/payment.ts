@@ -57,8 +57,7 @@ export async function createCheckoutSession(
   userId: string,
   userEmail: string,
   tier: SubscriptionTier,
-  successUrl: string,
-  cancelUrl: string
+  successUrl: string
 ): Promise<CheckoutSession> {
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
@@ -153,7 +152,7 @@ export async function verifyTransaction(reference: string): Promise<{
   paid: boolean;
   amount: number;
   email: string;
-  metadata: any;
+  metadata: unknown;
 }> {
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
 

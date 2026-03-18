@@ -1,4 +1,4 @@
-import { getUserSubscriptionTier, getTierLimits, getHistoryCutoffDate, userHasFeature } from "../services/subscription";
+import { userHasFeature } from "../services/subscription";
 import { SubscriptionTier } from "../db/schema";
 
 /**
@@ -85,7 +85,7 @@ export function getUpgradeRecommendation(
 
   // Check if specific feature is needed
   if (needsFeature && !limits.features.includes(needsFeature)) {
-    const targetTier = Object.entries(getTierLimits("HOUSEHOLD").features).find(([_, features]) =>
+    const targetTier = Object.entries(getTierLimits("HOUSEHOLD").features).some(([, features]) =>
       features.includes(needsFeature)
     ) ? "HOUSEHOLD" : "AGENT";
 

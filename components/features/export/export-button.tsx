@@ -15,7 +15,6 @@ import { getGroupExportData, type ExportRow } from "@/app/actions/export"
 
 interface ExportButtonProps {
   groupId: string
-  groupName: string
 }
 
 /**
@@ -28,7 +27,7 @@ interface ExportButtonProps {
  *      with a print-specific CSS media query — produces a clean PDF
  *      without any PDF library dependencies.
  */
-export function ExportButton({ groupId, groupName }: ExportButtonProps) {
+export function ExportButton({ groupId }: ExportButtonProps) {
   const [isPending, startTransition] = useTransition()
 
   function fetchAndExport(type: "csv" | "pdf") {

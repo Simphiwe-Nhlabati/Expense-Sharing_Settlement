@@ -85,7 +85,7 @@ export default async function GroupPage(props: { params: Promise<{ groupId: stri
                     </Card>
                 ) : (
                     <div className="grid gap-3">
-                        {expenses.map((expense: any, index) => (
+                        {expenses.map((expense, index) => (
                             <Card 
                               key={expense.id} 
                               className="group overflow-hidden border-0 shadow-md card-lift bg-card animate-scale-in"

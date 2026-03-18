@@ -43,7 +43,7 @@ export default function SignUpPage() {
       } else {
         toast.error(data.error || "Failed to create account")
       }
-    } catch (error) {
+    } catch {
       toast.error("An unexpected error occurred")
     } finally {
       setIsLoading(false)

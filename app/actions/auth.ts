@@ -4,8 +4,7 @@ import { cookies } from "next/headers"
 import { db } from "@/server/db"
 import { users } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
-import { verifyAccessToken, generateAccessToken, generateRefreshToken } from "@/server/services/auth"
-import { v4 as uuidv4 } from "uuid"
+import { verifyAccessToken } from "@/server/services/auth"
 
 export interface AuthUser {
   id: string;
@@ -48,7 +47,7 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
       fullName: dbUser.fullName,
       avatarUrl: dbUser.avatarUrl,
     }
-  } catch (error) {
+  } catch {
     return null
   }
 }
@@ -72,7 +71,7 @@ export async function ensureUserSynced(): Promise<{ success: boolean; user?: Aut
     }
 
     // Check if user exists in DB
-    let dbUser = await db.query.users.findFirst({
+    const dbUser = await db.query.users.findFirst({
       where: eq(users.authId, payload.userId),
     })
 

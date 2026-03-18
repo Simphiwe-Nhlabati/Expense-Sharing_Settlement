@@ -1,10 +1,10 @@
 import { AuthHeader } from "@/components/auth-header";
 import { Card, CardContent } from "@/components/ui/card";
-import { Activity, Receipt, ArrowRightLeft } from "lucide-react";
+import { Receipt, ArrowRightLeft } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { db } from "@/server/db";
-import { ledgerEntries, expenses, groups, users } from "@/server/db/schema";
-import { desc, eq, and, or } from "drizzle-orm";
+import { ledgerEntries, groups, users } from "@/server/db/schema";
+import { desc } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/app/actions/auth";
 import { redirect } from "next/navigation";
 

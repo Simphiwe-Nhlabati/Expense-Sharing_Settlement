@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Sparkles, Zap, ShieldCheck, Loader2 } from "lucide-react";
 import { subscriptionApi } from "@/lib/api/subscription";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 
 interface Tier {
   tier: string;
@@ -38,7 +37,7 @@ interface Subscription {
   };
 }
 
-const TIER_ICONS: Record<string, any> = {
+const TIER_ICONS: Record<string, React.ElementType> = {
   BRAAI: Zap,
   HOUSEHOLD: ShieldCheck,
   AGENT: Sparkles,
@@ -51,7 +50,6 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 export default function SubscriptionPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -95,9 +93,9 @@ export default function SubscriptionPage() {
         toast.success(`Successfully upgraded to ${tier} tier!`);
         loadSubscription();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Upgrade failed:", error);
-      toast.error(error.message || "Failed to upgrade subscription");
+      toast.error(error instanceof Error ? error.message : "Failed to upgrade subscription");
     } finally {
       setUpgrading(null);
     }
@@ -113,9 +111,9 @@ export default function SubscriptionPage() {
       const result = await subscriptionApi.cancel();
       toast.success(result.message);
       loadSubscription();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Cancel failed:", error);
-      toast.error(error.message || "Failed to cancel subscription");
+      toast.error(error instanceof Error ? error.message : "Failed to cancel subscription");
     } finally {
       setCancelling(false);
     }
@@ -176,7 +174,7 @@ export default function SubscriptionPage() {
                   </Badge>
                 </CardTitle>
                 <CardDescription>
-                  You're currently on the{" "}
+                  You&apos;re currently on the{" "}
                   <span className="font-semibold text-primary">{currentTier}</span> tier
                   {subscription.cancelAtPeriodEnd && (
                     <span className="text-destructive ml-2">

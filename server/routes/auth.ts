@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, Context } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { db } from "../db";
@@ -35,7 +35,7 @@ const signInSchema = z.object({
  * Set authentication cookies with secure configuration.
  * Tokens are NOT returned in JSON body to prevent XSS token exfiltration.
  */
-function setAuthCookies(c: any, accessToken: string, refreshToken: string) {
+function setAuthCookies(c: Context<HonoEnv>, accessToken: string, refreshToken: string) {
   setCookie(c, "access_token", accessToken, {
     httpOnly: true,
     secure: COOKIE_SECURE,

@@ -62,7 +62,6 @@ app.get("/:groupId", auth(), async (c) => {
     });
 
     let lastSeenId = latestEntry?.id ?? null;
-    let lastSeenTimestamp = latestEntry?.createdAt ?? new Date(0);
 
     // Send initial heartbeat so client knows connection is alive
     await stream.writeSSE({
@@ -82,7 +81,6 @@ app.get("/:groupId", auth(), async (c) => {
 
         if (newest && newest.id !== lastSeenId) {
           lastSeenId = newest.id;
-          lastSeenTimestamp = newest.createdAt;
 
           await stream.writeSSE({
             event: "balance_updated",

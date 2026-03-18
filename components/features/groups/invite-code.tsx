@@ -21,11 +21,10 @@ import { cn } from "@/lib/utils"
 
 interface InviteCodeCardProps {
   inviteCode: string
-  groupId?: string
 }
 
 /** Displays the invite code with a copy button — used on the settings page */
-export function InviteCodeCard({ inviteCode, groupId }: InviteCodeCardProps) {
+export function InviteCodeCard({ inviteCode }: InviteCodeCardProps) {
   const [copied, setCopied] = useState(false)
 
   const shareUrl =

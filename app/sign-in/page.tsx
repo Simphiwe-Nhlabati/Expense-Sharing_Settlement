@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { useAuthStore } from "@/lib/stores/auth-store"
-import { Mail, Lock, ArrowRight, Sparkles } from "lucide-react"
+import { Mail, Lock, ArrowRight } from "lucide-react"
 
 export default function SignInPage() {
   const router = useRouter()
@@ -42,7 +42,7 @@ export default function SignInPage() {
       } else {
         toast.error(data.error || "Failed to sign in")
       }
-    } catch (error) {
+    } catch {
       toast.error("An unexpected error occurred")
     } finally {
       setIsLoading(false)

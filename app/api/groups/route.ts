@@ -33,7 +33,7 @@ export async function GET() {
     }
 
     return NextResponse.json(data)
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch groups" },
       { status: 500 }

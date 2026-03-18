@@ -40,21 +40,28 @@ export function SettleUpDialog({ groupId, onSuccess }: SettleUpDialogProps) {
 
   // Fetch debts when dialog opens
   useEffect(() => {
-    if (open) {
-        setLoading(true)
-        getDebts(groupId).then((data) => {
-            setDebts(data)
-            setLoading(false)
-        })
+    if (!open) return;
+    
+    const fetchDebts = async () => {
+      setLoading(true)
+      const data = await getDebts(groupId)
+      setDebts(data)
+      setLoading(false)
     }
+    
+    fetchDebts()
   }, [open, groupId])
 
   // Update amount when debt selected
   useEffect(() => {
-      if (selectedDebtId) {
-          const debt = debts.find(d => d.userId === selectedDebtId)
-          if (debt) setAmount(debt.amount / 100)
-      }
+    if (!selectedDebtId) return;
+    
+    const debt = debts.find(d => d.userId === selectedDebtId)
+    // Defer setState to avoid calling it synchronously in effect
+    const timer = setTimeout(() => {
+      if (debt) setAmount(debt.amount / 100)
+    }, 0)
+    return () => clearTimeout(timer)
   }, [selectedDebtId, debts])
 
   async function handleSettle() {

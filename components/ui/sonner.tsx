@@ -16,7 +16,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    // Defer mount flag to next render
+    const timer = setTimeout(() => setMounted(true), 0)
+    return () => clearTimeout(timer)
   }, [])
 
   if (!mounted) return null

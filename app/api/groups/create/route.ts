@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, data })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to create group. Please try again." },
       { status: 500 }

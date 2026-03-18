@@ -20,7 +20,7 @@ interface UpgradeResponse {
   reference?: string;
   tier?: string;
   price?: string;
-  subscription?: any;
+  subscription?: unknown;
 }
 
 interface SubscriptionResponse {
@@ -37,7 +37,7 @@ interface SubscriptionResponse {
     features: string[];
     priceZar: number;
   };
-  availableTiers?: any[];
+  availableTiers?: unknown[];
 }
 
 interface TiersResponse {
