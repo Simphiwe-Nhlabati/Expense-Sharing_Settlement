@@ -11,8 +11,12 @@ export const createExpenseSchema = z.object({
   description: z.string().min(2, "Description is required"),
   amount: z.number().positive("Amount must be greater than 0"),
   paidBy: z.string().min(1, "Payer is required"),
-  date: z.date().default(() => new Date()),
+  date: z.date().optional().default(() => new Date()),
 })
 
-export type CreateGroupInput = z.infer<typeof createGroupSchema>
-export type CreateExpenseInput = z.infer<typeof createExpenseSchema>
+// Use z.input for form input types (what the user types)
+// Use z.output for output types (what the schema returns after parsing)
+export type CreateGroupInput = z.input<typeof createGroupSchema>
+export type CreateGroupOutput = z.output<typeof createGroupSchema>
+export type CreateExpenseInput = z.input<typeof createExpenseSchema>
+export type CreateExpenseOutput = z.output<typeof createExpenseSchema>

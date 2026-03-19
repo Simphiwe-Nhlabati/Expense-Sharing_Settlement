@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { db } from "../db";
 import { expenses, ledgerEntries, users, groupMembers } from "../db/schema";
 import { runIdempotentAction } from "../middleware/idempotency";
-import { eq, and, gte, desc } from "drizzle-orm";
+import { eq, and, gte, desc, isNull } from "drizzle-orm";
 import { verifyGroupMember } from "../middleware/group-auth";
 import { logAudit } from "../services/audit";
 import { sanitize } from "../middleware/sanitization";
@@ -255,7 +255,7 @@ app.get("/:groupId", verifyGroupMember(), async (c) => {
 
     const whereConditions = [
         eq(expenses.groupId, groupId),
-        eq(expenses.deletedAt, null)
+        isNull(expenses.deletedAt)
     ];
 
     if (historyCutoff) {
@@ -291,7 +291,7 @@ app.get("/:groupId/export/pdf", subscriptionMeter("FEATURE", "pdf_export"), veri
     const groupExpenses = await db.query.expenses.findMany({
         where: and(
             eq(expenses.groupId, groupId),
-            eq(expenses.deletedAt, null)
+            isNull(expenses.deletedAt)
         ),
         orderBy: [desc(expenses.date)],
         with: {
@@ -326,7 +326,7 @@ app.get("/:groupId/export/csv", subscriptionMeter("FEATURE", "csv_xero_export"),
     const groupExpenses = await db.query.expenses.findMany({
         where: and(
             eq(expenses.groupId, groupId),
-            eq(expenses.deletedAt, null)
+            isNull(expenses.deletedAt)
         ),
         orderBy: [desc(expenses.date)],
         with: {

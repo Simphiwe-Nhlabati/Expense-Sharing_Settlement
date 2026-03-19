@@ -62,7 +62,7 @@ export default async function GroupSettingsPage(props: { params: Promise<{ group
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <InviteCodeCard inviteCode={group.inviteCode} groupId={group.id} />
+                    <InviteCodeCard inviteCode={group.inviteCode} />
                 </CardContent>
             </Card>
 

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createGroupSchema, type CreateGroupInput } from "@/lib/schemas"
 import { db } from "@/server/db"
 import { groups, groupMembers, users } from "@/server/db/schema"
-import { eq, and, desc } from "drizzle-orm"
+import { eq, and, desc, isNull } from "drizzle-orm"
 import { getAuthenticatedUser } from "./auth"
 import { generateInviteCode } from "@/lib/invite-code"
 import { logAudit } from "@/server/services/audit"
@@ -148,7 +148,7 @@ export async function joinGroupByCode(inviteCode: string) {
   const group = await db.query.groups.findFirst({
       where: and(
           eq(groups.inviteCode, code),
-          eq(groups.deletedAt, null)
+          isNull(groups.deletedAt)
       )
   });
 

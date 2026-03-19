@@ -1,5 +1,5 @@
 import { userHasFeature } from "../services/subscription";
-import { SubscriptionTier } from "../db/schema";
+import { SubscriptionTier, SUBSCRIPTION_TIERS } from "../db/schema";
 
 /**
  * Feature flags for subscription tiers
@@ -72,7 +72,7 @@ export function getUpgradeRecommendation(
   groupCount: number,
   needsFeature?: string
 ): { shouldUpgrade: boolean; recommendedTier?: SubscriptionTier; reason?: string } {
-  const limits = getTierLimits(currentTier);
+  const limits = SUBSCRIPTION_TIERS[currentTier];
 
   // Check if approaching group limit
   if (limits.maxGroups !== -1 && groupCount >= limits.maxGroups * 0.8) {
@@ -85,13 +85,18 @@ export function getUpgradeRecommendation(
 
   // Check if specific feature is needed
   if (needsFeature && !limits.features.includes(needsFeature)) {
-    const targetTier = Object.entries(getTierLimits("HOUSEHOLD").features).some(([, features]) =>
-      features.includes(needsFeature)
-    ) ? "HOUSEHOLD" : "AGENT";
+    const householdLimits = SUBSCRIPTION_TIERS.HOUSEHOLD;
+    const agentLimits = SUBSCRIPTION_TIERS.AGENT;
+    
+    const targetTier = householdLimits.features.includes(needsFeature)
+      ? "HOUSEHOLD"
+      : agentLimits.features.includes(needsFeature)
+        ? "AGENT"
+        : currentTier;
 
     return {
       shouldUpgrade: true,
-      recommendedTier: targetTier as SubscriptionTier,
+      recommendedTier: targetTier,
       reason: `Upgrade to access ${needsFeature.replace("_", " ")} feature.`,
     };
   }

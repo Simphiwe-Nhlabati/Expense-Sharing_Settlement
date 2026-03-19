@@ -56,7 +56,7 @@ export function CreateExpenseDialog({ groupId, members = [] }: CreateExpenseDial
       groupId: groupId,
       paidBy: "",
       date: new Date(),
-    },
+    } as CreateExpenseInput,
   })
 
   async function onSubmit(data: CreateExpenseInput) {

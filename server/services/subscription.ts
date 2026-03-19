@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { subscriptions, groupMembers, groups, SubscriptionTier, SUBSCRIPTION_TIERS } from "../db/schema";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, isNull } from "drizzle-orm";
 
 /**
  * Get or create a user's subscription
@@ -59,7 +59,7 @@ export async function countUserGroups(userId: string): Promise<number> {
     .innerJoin(groups, eq(groups.id, groupMembers.groupId))
     .where(and(
       eq(groupMembers.userId, userId),
-      eq(groups.deletedAt, null)
+      isNull(groups.deletedAt)
     ));
 
   return result[0]?.count ?? 0;
@@ -176,12 +176,12 @@ export async function upgradeUserSubscription(
  * Cancel user's subscription (at period end)
  */
 export async function cancelUserSubscription(userId: string) {
-  await getOrCreateUserSubscription(userId);
+  const subscription = await getOrCreateUserSubscription(userId);
 
   const [updated] = await db.update(subscriptions)
     .set({
       cancelAtPeriodEnd: true,
-      status: existing.status === "ACTIVE" ? "ACTIVE" : existing.status,
+      status: subscription.status === "ACTIVE" ? "ACTIVE" : subscription.status,
       updatedAt: new Date(),
     })
     .where(eq(subscriptions.userId, userId))

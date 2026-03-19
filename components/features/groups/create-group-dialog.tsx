@@ -45,7 +45,7 @@ export function CreateGroupDialog() {
       name: "",
       description: "",
       currency: "ZAR",
-    },
+    } as CreateGroupInput,
   })
 
   async function onSubmit(data: CreateGroupInput) {

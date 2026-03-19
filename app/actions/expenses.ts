@@ -1,11 +1,11 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { createExpenseSchema } from "@/lib/schemas"
+import { createExpenseSchema, type CreateExpenseInput } from "@/lib/schemas"
 import { db } from "@/server/db"
 import { expenses, ledgerEntries, groupMembers, users } from "@/server/db/schema"
 import { getAuthenticatedUser } from "./auth"
-import { eq } from "drizzle-orm"
+import { eq, and } from "drizzle-orm"
 
 interface CreateExpenseResult {
   success: boolean;
@@ -110,7 +110,7 @@ export async function getExpenses(groupId: string) {
       description: e.description,
       amount: e.amount,
       date: new Date(e.date),
-      paidBy: e.paidBy || "Unknown",
+      paidBy: e.paidById || "Unknown",
       type: "EXPENSE"
   }));
 

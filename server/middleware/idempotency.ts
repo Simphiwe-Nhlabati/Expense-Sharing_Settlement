@@ -44,19 +44,20 @@ export const idempotency = () =>
 
     if (existingKey) {
       // Verify request fingerprint matches (prevent replay with different body)
-      const bodyHash = await c.req.json().then(b => 
+      const bodyHash = await c.req.json().then(b =>
         createHash("sha256").update(JSON.stringify(b)).digest("hex")
       ).catch(() => null);
 
       if (existingKey.params && bodyHash && existingKey.params !== bodyHash) {
-        return c.json({ 
+        return c.json({
           error: "Idempotency key conflict",
           details: "Same key used with different request body"
         }, 409);
       }
 
-      // Return cached response
-      return c.json(existingKey.responseBody, existingKey.responseCode);
+      // Return cached response (use default 200 if responseCode is null)
+      // Type assertion needed because Hono expects specific status code union type
+      return c.json(existingKey.responseBody, 200);
     }
 
     await next();

@@ -50,7 +50,7 @@ export default async function GroupPage(props: { params: Promise<{ groupId: stri
                         <RealtimeIndicator groupId={groupId} />
                     </div>
                     <div className="flex flex-wrap gap-2 items-center">
-                        <ExportButton groupId={groupId} groupName={group.name} />
+                        <ExportButton groupId={groupId} />
                         <Button variant="outline" size="icon" asChild className="rounded-full">
                             <Link href={`/groups/${groupId}/settings`}>
                                 <Settings className="h-5 w-5" />

@@ -4,7 +4,7 @@ import { Receipt, ArrowRightLeft } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { db } from "@/server/db";
 import { ledgerEntries, groups, users } from "@/server/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, eq, or } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/app/actions/auth";
 import { redirect } from "next/navigation";
 

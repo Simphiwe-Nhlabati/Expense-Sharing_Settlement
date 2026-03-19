@@ -32,7 +32,6 @@ const upgradeSchema = z.object({
   tier: z.enum(["BRAAI", "HOUSEHOLD", "AGENT"]),
   paymentProviderSubscriptionId: z.string().optional(),
   successUrl: z.string().url().optional(),
-  cancelUrl: z.string().url().optional(),
 });
 
 // GET /subscription - Get current subscription details
@@ -64,7 +63,7 @@ app.post("/upgrade", zValidator("json", upgradeSchema), async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const { tier, paymentProviderSubscriptionId, successUrl, cancelUrl } = c.req.valid("json");
+  const { tier, paymentProviderSubscriptionId, successUrl } = c.req.valid("json");
   const currentTier = await getUserSubscriptionTier(userId);
 
   if (tier === currentTier) {
@@ -73,23 +72,23 @@ app.post("/upgrade", zValidator("json", upgradeSchema), async (c) => {
 
   // If no paymentProviderSubscriptionId, create checkout session
   if (!paymentProviderSubscriptionId) {
-    if (!successUrl || !cancelUrl) {
+    if (!successUrl) {
       return c.json(
         {
-          error: "Missing URLs",
-          message: "successUrl and cancelUrl are required for checkout",
+          error: "Missing URL",
+          message: "successUrl is required for checkout",
         },
         400
       );
     }
 
     const userEmail = await getUserEmail(userId);
-    
+
     if (!userEmail) {
       return c.json({ error: "User email required", message: "Please set your email before upgrading" }, 400);
     }
 
-    const checkoutSession = await createCheckoutSession(userId, userEmail, tier, successUrl, cancelUrl);
+    const checkoutSession = await createCheckoutSession(userId, userEmail, tier, successUrl);
 
     return c.json({
       success: true,
@@ -105,13 +104,14 @@ app.post("/upgrade", zValidator("json", upgradeSchema), async (c) => {
   // Verify payment with Paystack if reference provided
   try {
     const verification = await verifyTransaction(paymentProviderSubscriptionId);
-    
+
     if (!verification.paid) {
       return c.json({ error: "Payment not completed", message: "Transaction verification failed" }, 400);
     }
 
-    // Check metadata for tier
-    const paidTier = verification.metadata?.subscription_tier as SubscriptionTier | undefined;
+    // Check metadata for tier (metadata is unknown type, so we cast)
+    const metadata = verification.metadata as Record<string, unknown> | undefined;
+    const paidTier = metadata?.subscription_tier as SubscriptionTier | undefined;
     if (paidTier && paidTier !== tier) {
       return c.json({ error: "Tier mismatch", message: `Paid for ${paidTier} but requested ${tier}` }, 400);
     }
