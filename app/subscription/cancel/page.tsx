@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { AuthHeader } from "@/components/auth-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { XCircle } from "lucide-react";
+import { Clock } from "lucide-react";
 
 export default function SubscriptionCancelPage() {
   const router = useRouter();
@@ -15,10 +15,11 @@ export default function SubscriptionCancelPage() {
       <main className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <XCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-            <CardTitle>Payment Cancelled</CardTitle>
+            <Clock className="h-12 w-12 mx-auto mb-4 text-amber-500" />
+            <CardTitle>Coming Soon</CardTitle>
             <CardDescription>
-              You cancelled the payment process. No charges were made.
+              Subscription features are not available yet. 
+              We&apos;re working on bringing you premium features soon!
             </CardDescription>
           </CardHeader>
           <CardContent className="flex gap-2">

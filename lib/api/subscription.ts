@@ -1,6 +1,8 @@
 /**
  * Subscription API Client
  * Handles all subscription-related API calls
+ * 
+ * Note: Payment features are currently disabled (Coming Soon)
  */
 
 const API_BASE = "/api/subscription";
@@ -21,6 +23,7 @@ interface UpgradeResponse {
   tier?: string;
   price?: string;
   subscription?: unknown;
+  error?: string;
 }
 
 interface SubscriptionResponse {
@@ -87,6 +90,7 @@ export const subscriptionApi = {
 
   /**
    * Upgrade subscription tier
+   * Note: This will return a "Coming Soon" error until payment integration is enabled
    */
   async upgrade(request: UpgradeRequest): Promise<UpgradeResponse> {
     const response = await fetch(`${API_BASE}/upgrade`, {
@@ -102,29 +106,12 @@ export const subscriptionApi = {
 
   /**
    * Cancel subscription
+   * Note: This will return a "Coming Soon" error until payment integration is enabled
    */
   async cancel(): Promise<UpgradeResponse> {
     const response = await fetch(`${API_BASE}/cancel`, {
       method: "POST",
       credentials: "include",
-    });
-    return handleResponse<UpgradeResponse>(response);
-  },
-
-  /**
-   * Verify Paystack payment reference
-   */
-  async verifyPayment(reference: string): Promise<UpgradeResponse> {
-    const response = await fetch(`${API_BASE}/upgrade`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        tier: "HOUSEHOLD", // Will be determined by webhook
-        paymentProviderSubscriptionId: reference,
-      }),
     });
     return handleResponse<UpgradeResponse>(response);
   },

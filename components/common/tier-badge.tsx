@@ -8,21 +8,23 @@ interface TierBadgeProps {
   className?: string;
 }
 
-const tierConfig: Record<SubscriptionTier, { bg: string; text: string; label: string }> = {
+const tierConfig: Record<SubscriptionTier, { bg: string; text: string; label: string; comingSoon?: boolean }> = {
   BRAAI: {
-    bg: "bg-yellow-500/20 border-yellow-500/30",
-    text: "text-yellow-700 dark:text-yellow-400",
-    label: "Braai (Free)",
+    bg: "bg-green-500/20 border-green-500/30",
+    text: "text-green-700 dark:text-green-400",
+    label: "Free",
   },
   HOUSEHOLD: {
     bg: "bg-blue-500/20 border-blue-500/30",
     text: "text-blue-700 dark:text-blue-400",
-    label: "Household",
+    label: "Household (Coming Soon)",
+    comingSoon: true,
   },
   AGENT: {
     bg: "bg-purple-500/20 border-purple-500/30",
     text: "text-purple-700 dark:text-purple-400",
-    label: "Agent",
+    label: "Agent (Coming Soon)",
+    comingSoon: true,
   },
 };
 

@@ -14,6 +14,53 @@ const createTestQueryClient = () => {
   });
 };
 
+// Mock drizzle-orm for unit tests - provides mock implementations for all DB operations
+vi.mock('drizzle-orm', async () => {
+  const actual = await vi.importActual('drizzle-orm');
+  return {
+    ...(actual as object),
+    and: (...args: any[]) => ({ type: 'and', args }),
+    eq: (field: any, value: any) => ({ type: 'eq', field, value }),
+    gte: (field: any, value: any) => ({ type: 'gte', field, value }),
+    lt: (field: any, value: any) => ({ type: 'lt', field, value }),
+    sql: new Proxy(
+      function sql(strings: TemplateStringsArray, ...values: any[]) {
+        return { type: 'sql', strings, values };
+      },
+      {
+        get: (target, prop) => {
+          if (prop === 'unsafe') return vi.fn();
+          return (target as any)[prop];
+        },
+      }
+    ) as any,
+  };
+});
+
+// Mock @/server/db for unit tests - prevents actual database connections
+vi.mock('@/server/db', () => ({
+  db: {
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn().mockResolvedValue([]),
+      })),
+    })),
+    insert: vi.fn(() => ({
+      values: vi.fn().mockResolvedValue(undefined),
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn().mockResolvedValue(undefined),
+      })),
+    })),
+    delete: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn().mockResolvedValue(undefined),
+      })),
+    })),
+  },
+}));
+
 // Mock next-themes
 vi.mock('next-themes', () => ({
   useTheme: () => ({
