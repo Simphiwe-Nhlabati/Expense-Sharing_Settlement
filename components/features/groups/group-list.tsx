@@ -1,3 +1,5 @@
+"use client"
+
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -21,14 +23,20 @@ async function fetchGroups(): Promise<Group[]> {
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
   })
 
   if (!response.ok) {
-    const error = await response.json()
+    if (response.status === 401) {
+      return [] // Return empty array if not authenticated
+    }
+    const error = await response.json().catch(() => ({ error: "Failed to fetch groups" }))
     throw new Error(error.error || "Failed to fetch groups")
   }
 
-  return response.json()
+  const data = await response.json()
+  // Backend returns { groups: [...] }, extract the array
+  return data.groups || []
 }
 
 export function GroupList() {

@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { v4 as uuidv4 } from "uuid";
+import { hash, verify } from "@node-rs/argon2";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-change-this-in-production"
@@ -17,18 +18,23 @@ export interface JWTPayload {
 }
 
 /**
- * Hash a password using Bun.password (Bun runtime)
+ * Hash a password using Argon2id (cross-platform: Node.js and Bun)
  * Uses Argon2id by default (recommended for security)
  */
 export async function hashPassword(password: string): Promise<string> {
-  return Bun.password.hash(password);
+  return hash(password, {
+    memoryCost: 19456, // 19 MB
+    timeCost: 2,       // 2 iterations
+    outputLen: 32,     // 32 bytes
+    parallelism: 1,    // 1 parallel thread
+  });
 }
 
 /**
- * Verify a password against a hash using Bun.password (Bun runtime)
+ * Verify a password against a hash using Argon2id (cross-platform)
  */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return Bun.password.verify(password, hash);
+  return verify(hash, password);
 }
 
 /**

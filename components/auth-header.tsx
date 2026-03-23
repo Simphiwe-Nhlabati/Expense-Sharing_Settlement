@@ -51,7 +51,7 @@ export function AuthHeader() {
           <div className="h-10 w-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-md shadow-primary/30 group-hover:scale-110 transition-transform duration-200">
             <span className="text-sm font-bold text-primary-foreground" style={{fontFamily: 'var(--font-display)'}}>Z</span>
           </div>
-          <h1 className="text-lg font-bold text-gradient hidden sm:block">ZAR Ledger</h1>
+          <h1 className="text-lg font-bold hidden sm:block">ZAR Ledger</h1>
         </Link>
         <div className="flex items-center gap-3">
           {isLoading ? (

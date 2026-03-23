@@ -134,9 +134,9 @@ export default async function Home() {
                 {/* Main headline */}
                 <h1 className="heading-display text-white drop-shadow-lg animate-fade-in">
                    Split Expenses with{" "}
-                   <span className="bg-gradient-emerald bg-clip-text text-transparent">Precision</span>{" "}
+                   <span className="text-emerald-300 drop-shadow-md">Precision</span>{" "}
                    and{" "}
-                   <span className="bg-gradient-coral bg-clip-text text-transparent">Trust</span>
+                   <span className="text-emerald-300 drop-shadow-md">Trust</span>
                 </h1>
 
                 {/* Subheadline */}
@@ -184,7 +184,7 @@ export default async function Home() {
             <div className="container mx-auto px-4 relative">
               <div className="mx-auto max-w-4xl text-center space-y-4 mb-16">
                 <h2 className="heading-section">
-                   Built for <span className="text-gradient">Trust</span>
+                   Built for <span className="text-emerald-300 drop-shadow-md">Trust</span>
                 </h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                   Unlike other apps, we handle the complexity of South African banking logic

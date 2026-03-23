@@ -2,10 +2,11 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { db } from "../db";
-import { groups, groupMembers, users } from "../db/schema";
-import { eq, and } from "drizzle-orm";
+import { groups, groupMembers, users, expenses } from "../db/schema";
+import { eq, and, count } from "drizzle-orm";
 import { verifyGroupMember } from "../middleware/group-auth";
-import { subscriptionMeter } from "../middleware/subscription-meter";
+// TEMPORARILY DISABLED: Subscription meter - Paystack integration coming soon
+// import { subscriptionMeter } from "../middleware/subscription-meter";
 import { logAudit } from "../services/audit";
 import { sanitize } from "../middleware/sanitization";
 import { v4 as uuidv4 } from "uuid";
@@ -38,6 +39,7 @@ app.get("/", async (c) => {
 
   if (!userId) return c.json({ error: "User profile not found" }, 404);
 
+  // Get user's groups with member count
   const userGroups = await db.select({
       id: groups.id,
       name: groups.name,
@@ -51,21 +53,47 @@ app.get("/", async (c) => {
     eq(groupMembers.userId, userId)
   ));
 
-  // Add subscription info to response
-  const tier = c.get("subscriptionTier");
-  const limits = c.get("subscriptionLimits");
+  // For each group, get member count and calculate balance
+  const groupsWithDetails = await Promise.all(
+    userGroups.map(async (group) => {
+      // Get member count
+      const [memberCountResult] = await db
+        .select({ count: count() })
+        .from(groupMembers)
+        .where(eq(groupMembers.groupId, group.id));
+
+      // Get expenses and calculate balance (simplified - sum of all expenses)
+      const groupExpenses = await db
+        .select({ amount: expenses.amount })
+        .from(expenses)
+        .where(eq(expenses.groupId, group.id));
+
+      const totalBalance = groupExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+
+      return {
+        ...group,
+        members: memberCountResult?.count ?? 0,
+        balance: totalBalance,
+      };
+    })
+  );
+
+  // TEMPORARILY DISABLED: Subscription info - Paystack integration coming soon
+  // const tier = c.get("subscriptionTier");
+  // const limits = c.get("subscriptionLimits");
 
   return c.json({
-    groups: userGroups,
-    subscription: tier ? {
-      tier,
-      limits,
-    } : undefined,
+    groups: groupsWithDetails,
+    // subscription: tier ? {
+    //   tier,
+    //   limits,
+    // } : undefined,
   });
 });
 
 // POST /groups - Create Group
-app.post("/", subscriptionMeter("CREATE_GROUP"), zValidator("json", createGroupSchema), async (c) => {
+// TEMPORARILY DISABLED: subscriptionMeter - Paystack integration coming soon
+app.post("/", zValidator("json", createGroupSchema), async (c) => {
   const authId = c.get("authId");
   
   const userId = await getUserIdByAuthId(authId);

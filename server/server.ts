@@ -9,7 +9,8 @@ import { safeLogger } from "./middleware/safe-logger";
 import { rateLimiter } from "./middleware/rate-limiter";
 import { auth } from "./middleware/auth";
 import { sanitizeBody } from "./middleware/sanitization";
-import { attachSubscriptionContext } from "./middleware/subscription-meter";
+// TEMPORARILY DISABLED: Subscription middleware - Paystack integration coming soon
+// import { attachSubscriptionContext } from "./middleware/subscription-meter";
 import { HonoEnv } from "./types";
 
 const app = new Hono<HonoEnv>().basePath("/api");
@@ -96,15 +97,14 @@ app.use("*", sanitizeBody());
 app.use("*", prettyJSON());
 
 // 10. Authentication (protected routes only)
-app.use("/auth/*", auth());
+// Note: sign-in, sign-up are public - auth is applied inside the route handler where needed
+app.use("/auth/me", auth());
 app.use("/expenses/*", auth());
 app.use("/groups/*", auth());
 app.use("/realtime/*", auth());
-app.use("/subscription/*", auth());
-
-// 11. Attach Subscription Context (for authenticated requests)
-app.use("/subscription/*", attachSubscriptionContext());
-app.use("/groups/*", attachSubscriptionContext());
+// TEMPORARILY DISABLED: Subscription context - Paystack integration coming soon
+// app.use("/subscription/*", attachSubscriptionContext());
+// app.use("/groups/*", attachSubscriptionContext());
 
 // --- Routes ---
 import authRoutes from "./routes/auth";

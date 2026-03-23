@@ -61,7 +61,7 @@ export default function AboutPage() {
           <section className="space-y-8">
             <div className="text-center space-y-4">
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Why <span className="text-gradient">ZAR Ledger</span>?
+                Why <span className="text-emerald-300 drop-shadow-md">ZAR Ledger</span>?
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Unlike other apps, we handle the complexity of South African banking logic 

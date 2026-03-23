@@ -137,7 +137,7 @@ export default function SignInPage() {
             <div className="space-y-3 max-w-md">
               <h2 className="text-3xl font-bold tracking-tight text-foreground">
                 Manage your expenses with{" "}
-                <span className="text-gradient">precision</span>
+                <span className="text-emerald-300 drop-shadow-md">precision</span>
               </h2>
               <p className="text-muted-foreground text-lg leading-relaxed">
                 Track Rands, split fairly, and settle instantly. Built for South Africa, designed for trust.
