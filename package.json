@@ -44,6 +44,7 @@
     "sonner": "^2.0.7",
     "supertest": "^7.2.2",
     "tailwind-merge": "^3.4.1",
+    "undici": "^7.24.6",
     "uuid": "^13.0.0",
     "valibot": "^1.2.0",
     "xss": "^1.0.15",
