@@ -9,6 +9,7 @@ import { auth } from "../middleware/auth";
 import { v4 as uuidv4 } from "uuid";
 import { HonoEnv } from "../types";
 import { setCookie } from "hono/cookie";
+import { ApiError } from "../middleware/error-handler";
 
 // Configuration from environment
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -63,7 +64,7 @@ app.post("/sign-up", zValidator("json", signUpSchema), async (c) => {
     });
 
     if (existingUser) {
-      return c.json({ error: "User with this email already exists" }, 400);
+      throw ApiError.badRequest("User with this email already exists");
     }
 
     const passwordHash = await hashPassword(password);
@@ -94,8 +95,11 @@ app.post("/sign-up", zValidator("json", signUpSchema), async (c) => {
       },
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
     console.error("[AUTH] Sign up error:", error);
-    return c.json({ error: "Failed to create account" }, 500);
+    throw ApiError.internal("Failed to create account");
   }
 });
 
@@ -110,14 +114,14 @@ app.post("/sign-in", zValidator("json", signInSchema), async (c) => {
     });
 
     if (!user) {
-      return c.json({ error: "Invalid email or password" }, 401);
+      throw ApiError.unauthorized("Invalid email or password");
     }
 
     // Verify password
     const validPassword = await verifyPassword(password, user.passwordHash || "");
 
     if (!validPassword) {
-      return c.json({ error: "Invalid email or password" }, 401);
+      throw ApiError.unauthorized("Invalid email or password");
     }
 
     // Generate tokens
@@ -138,8 +142,11 @@ app.post("/sign-in", zValidator("json", signInSchema), async (c) => {
       },
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
     console.error("[AUTH] Sign in error:", error);
-    return c.json({ error: "Failed to sign in" }, 500);
+    throw ApiError.internal("Failed to sign in");
   }
 });
 
@@ -170,7 +177,7 @@ app.get("/me", auth(), async (c) => {
   const authId = c.get("authId");
 
   if (!authId) {
-    return c.json({ error: "Unauthorized" }, 401);
+    throw ApiError.unauthorized("Authentication required");
   }
 
   const user = await db.query.users.findFirst({
@@ -178,7 +185,7 @@ app.get("/me", auth(), async (c) => {
   });
 
   if (!user) {
-    return c.json({ error: "User not found" }, 404);
+    throw ApiError.notFound("User not found");
   }
 
   return c.json({

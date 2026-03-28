@@ -46,6 +46,7 @@
 | **ZAR-First Design** | All amounts stored in cents (BigInt) for precise Rand calculations |
 | **ACID Compliance** | PostgreSQL transactions ensure financial data integrity |
 | **POPIA Compliant** | South African data protection regulations built-in |
+| **Supabase Integration** | Managed PostgreSQL with automatic backups and SSL |
 | **Real-time Updates** | Instant balance updates across all group members |
 | **Audit Trail** | Complete history of all financial transactions |
 
@@ -99,7 +100,7 @@
 ├──────────────┬──────────────────────────────────────────────┤
 │ Runtime      │ Bun.js (High-performance JavaScript runtime) │
 │ Framework    │ Hono.js (Lightweight, fast web framework)    │
-│ Database     │ PostgreSQL 15+                               │
+│ Database     │ PostgreSQL 15+ (Supabase managed)            │
 │ ORM          │ Drizzle ORM (Type-safe, SQL-like queries)    │
 │ Auth         │ JWT (Jose library)                           │
 │ Validation   │ Zod + @hono/zod-validator                    │
@@ -114,6 +115,7 @@
 │                    Infrastructure                            │
 ├──────────────┬──────────────────────────────────────────────┤
 │ Server       │ Next.js + Hono (Dual server architecture)    │
+│ Database     │ Supabase (Managed PostgreSQL with backups)   │
 │ Cookies      │ HTTP-only, Secure, SameSite=Lax              │
 │ CORS         │ Configurable allowed origins                 │
 │ Rate Limit   │ Database-backed (configurable window)        │
@@ -191,7 +193,7 @@
 | Software | Version | Purpose |
 |----------|---------|---------|
 | **Bun** | 1.3+ | JavaScript runtime & package manager |
-| **PostgreSQL** | 15+ | Database server |
+| **PostgreSQL** | 15+ | Database server (Supabase for production) |
 | **Node.js** | 20+ | (Optional, for tooling) |
 
 ### Installation Commands
@@ -202,12 +204,6 @@ curl -fsSL https://bun.sh/install | bash
 
 # Verify installation
 bun --version
-
-# Install PostgreSQL (Ubuntu/Debian)
-sudo apt-get install postgresql postgresql-contrib
-
-# Install PostgreSQL (macOS with Homebrew)
-brew install postgresql@15
 ```
 
 ---
@@ -227,7 +223,15 @@ cd expense-sharing_settlement
 bun install
 ```
 
-### Step 3: Set Up PostgreSQL Database
+### Step 3: Set Up Database
+
+#### Option A: Production (Supabase) - Recommended
+
+1. Create a Supabase project at [https://supabase.com](https://supabase.com)
+2. Navigate to **Settings** > **Database**
+3. Copy your connection string and credentials
+
+#### Option B: Local Development (Self-hosted PostgreSQL)
 
 ```bash
 # Start PostgreSQL service
@@ -245,10 +249,10 @@ GRANT ALL PRIVILEGES ON DATABASE expense_settlement_db TO postgres;
 
 ```bash
 # Copy example environment file
-cp .env.example .env
+cp .env.example .env.local
 
-# Edit .env with your configuration
-nano .env
+# Edit .env.local with your configuration
+nano .env.local
 ```
 
 ### Step 5: Run Database Migrations
@@ -262,13 +266,26 @@ bunx drizzle-kit migrate
 
 ## ⚙️ Configuration
 
-### Environment Variables (.env)
+### Environment Variables (.env.local)
+
+> **Note:** Never commit `.env.local` to version control. For production deployment on Vercel, set these variables in the Vercel dashboard.
 
 ```ini
 # ===========================================
-# DATABASE (PostgreSQL)
+# DATABASE (Supabase PostgreSQL - Production)
 # ===========================================
-DATABASE_URL=postgresql://postgres:password@localhost:5432/expense_settlement_db
+# Supabase provides a managed PostgreSQL instance with built-in backups
+# Get these values from your Supabase dashboard:
+# - Project Settings > Database > Connection string
+# - Project Settings > API > Service role key
+
+# Primary connection string (from Vercel or Supabase)
+POSTGRES_URL=postgresql://postgres:[YOUR-PASSWORD]@db.xxx.supabase.co:5432/postgres?sslmode=require
+
+# Supabase-specific credentials (for Vercel integration)
+POSTGRES_SUPABASE_URL=https://xxx.supabase.co
+POSTGRES_SUPABASE_SERVICE_ROLE_KEY=eyJhbG...your-service-role-key
+NEXT_PUBLIC_POSTGRES_SUPABASE_ANON_KEY=eyJhbG...your-anon-key
 
 # ===========================================
 # JWT AUTHENTICATION
@@ -306,6 +323,54 @@ NODE_ENV=development
 # Generate a secure random secret
 openssl rand -base64 32
 ```
+
+### 🔗 Supabase Setup Guide
+
+1. **Create a Supabase Project**
+   - Visit [https://supabase.com](https://supabase.com)
+   - Click "New Project"
+   - Fill in project details (organization, name, database password)
+   - Wait for provisioning (~2 minutes)
+
+2. **Get Your Credentials**
+   - Go to **Project Settings** > **API**
+   - Copy the following:
+     - `Project URL` → `POSTGRES_SUPABASE_URL`
+     - `service_role secret` → `POSTGRES_SUPABASE_SERVICE_ROLE_KEY`
+     - `anon public` → `NEXT_PUBLIC_POSTGRES_SUPABASE_ANON_KEY`
+
+3. **Get Connection String**
+   - Go to **Project Settings** > **Database**
+   - Under "Connection string", copy the URI
+   - Replace `[YOUR-PASSWORD]` with your database password
+   - Set as `POSTGRES_URL`
+
+4. **Vercel Integration** (Production)
+   - Install Vercel CLI: `npm i -g vercel`
+   - Run: `vercel link`
+   - Run: `vercel env pull`
+   - Vercel will automatically sync Supabase credentials
+
+### 🗄️ Database Connection
+
+The application uses **Drizzle ORM** with **Supabase PostgreSQL** for production:
+
+```typescript
+// server/db/index.ts
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import * as schema from "./schema";
+
+const connectionString = process.env.POSTGRES_URL!;
+const client = postgres(connectionString, { prepare: false });
+export const db = drizzle(client, { schema });
+```
+
+**Connection Features:**
+- ✅ **SSL/TLS Required** - All connections use `sslmode=require`
+- ✅ **Connection Pooling** - Managed by Supabase
+- ✅ **Automatic Backups** - Daily backups enabled by Supabase
+- ✅ **Type Safety** - Full TypeScript support via Drizzle ORM
 
 ---
 
@@ -350,6 +415,69 @@ bun run test:ui
 ```bash
 bun run lint
 ```
+
+---
+
+## 🚀 Production Deployment
+
+### Deploy to Vercel with Supabase
+
+This application is optimized for deployment on **Vercel** with **Supabase** as the managed PostgreSQL provider.
+
+#### Prerequisites
+
+- [Vercel account](https://vercel.com/signup)
+- [Supabase project](https://supabase.com)
+- [Vercel CLI](https://vercel.com/docs/cli) installed (`npm i -g vercel`)
+
+#### Step 1: Link Your Vercel Project
+
+```bash
+# Login to Vercel
+vercel login
+
+# Link your project
+vercel link
+```
+
+#### Step 2: Set Up Supabase Credentials
+
+Ensure the following environment variables are set in your Vercel dashboard:
+
+1. Go to **Vercel Dashboard** > Your Project > **Settings** > **Environment Variables**
+2. Add the following variables from your Supabase project:
+
+| Variable | Value From Supabase |
+|----------|---------------------|
+| `POSTGRES_URL` | Database connection string (Settings > Database) |
+| `POSTGRES_SUPABASE_URL` | Project URL (Settings > API) |
+| `POSTGRES_SUPABASE_SERVICE_ROLE_KEY` | Service Role Key (Settings > API) |
+| `NEXT_PUBLIC_POSTGRES_SUPABASE_ANON_KEY` | Anon Public Key (Settings > API) |
+
+#### Step 3: Deploy
+
+```bash
+# Deploy to production
+vercel --prod
+```
+
+#### Step 4: Verify Deployment
+
+1. Check the deployment logs in Vercel dashboard
+2. Test the application at your production URL
+3. Verify database connectivity by creating a test group
+
+### Production Checklist
+
+Before deploying to production:
+
+- [ ] **Supabase**: Project created and credentials copied
+- [ ] **Environment Variables**: All Supabase variables set in Vercel dashboard
+- [ ] **JWT_SECRET**: Generated a secure random secret (min 32 chars)
+- [ ] **PII_HMAC_SECRET**: Generated a unique secret for PII hashing
+- [ ] **CORS_ORIGINS**: Updated to include only your production domains
+- [ ] **Database Migrations**: Ran `bunx drizzle-kit migrate`
+- [ ] **SSL Mode**: Connection string includes `?sslmode=require`
 
 ---
 
@@ -612,11 +740,12 @@ Examples:
 #### 1. Database Connection Error
 
 ```bash
-# Check PostgreSQL is running
-sudo service postgresql status
+# Check Supabase dashboard for connection status
+# Verify connection string in .env.local
+POSTGRES_URL=postgresql://postgres:[YOUR-PASSWORD]@db.xxx.supabase.co:5432/postgres?sslmode=require
 
-# Verify connection string in .env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/expense_settlement_db
+# For local development, check PostgreSQL is running
+sudo service postgresql status
 ```
 
 #### 2. Authentication 404 Error
@@ -696,7 +825,8 @@ expense-sharing_settlement/
 │
 ├── drizzle/                      # Database Migrations
 ├── tests/                        # Vitest Tests
-├── .env                          # Environment Variables
+├── .env.example                  # Example Environment Variables
+├── .env.local                    # Local Environment Variables (gitignored)
 ├── drizzle.config.ts
 ├── package.json
 └── README.md

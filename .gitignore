@@ -43,9 +43,13 @@ ci_pipline-issues
 Gemini-AI-generated-pic.svg
 
 scripts
+!scripts/deploy.ts
 
 # vercel
 .vercel
+.vercel/project.json
+.vercel/vercel.json
+.vercel/*.log
 
 # typescript
 *.tsbuildinfo
@@ -53,3 +57,12 @@ next-env.d.ts
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+.vercel
+.env*.local
+
+.vercel
+.env*.local
+
+
+

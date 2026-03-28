@@ -15,7 +15,11 @@
     "test:ui": "vitest --ui",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run tests/unit tests/components",
-    "test:integration": "vitest run tests/integration"
+    "test:integration": "vitest run tests/integration",
+    "deploy": "bun run scripts/deploy.ts",
+    "deploy:prod": "bun run scripts/deploy.ts --prod",
+    "vercel:link": "vercel link",
+    "vercel:env": "vercel env pull"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",

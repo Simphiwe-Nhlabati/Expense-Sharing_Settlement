@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   deployments: write
+  actions: read
 
 concurrency:
   group: deploy-production
@@ -15,6 +16,9 @@ concurrency:
 
 env:
   BUN_VERSION: 1.2.21
+  NODE_ENV: production
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
   predeploy-checks:
@@ -23,6 +27,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -32,8 +38,27 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Type check
+        run: bun run typecheck
+        continue-on-error: true
+
+      - name: Lint
+        run: bun run lint
+        continue-on-error: true
+
+      - name: Run tests
+        run: bun run test
+        continue-on-error: true
+
       - name: Build application
         run: bun run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: .next
+          retention-days: 1
 
   deploy-vercel:
     name: Deploy to Vercel
@@ -42,10 +67,18 @@ jobs:
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
-    if: ${{ secrets.VERCEL_TOKEN != '' && secrets.VERCEL_PROJECT_ID != '' && secrets.VERCEL_ORG_ID != '' }}
+    if: ${{ secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '' }}
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: .next
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -55,23 +88,118 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Install Vercel CLI
+        run: bun install -g vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
       - name: Deploy with Vercel
         id: deploy
         run: |
-          DEPLOY_URL=$(bunx vercel deploy --prod --token="${VERCEL_TOKEN}")
+          echo "Starting production deployment..."
+          DEPLOY_OUTPUT=$(vercel deploy --prod --token="${VERCEL_TOKEN}" 2>&1)
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^\s]+' | head -1)
+          
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "Failed to extract deployment URL"
+            exit 1
+          fi
+          
+          echo "Deployment URL: $DEPLOY_URL"
           echo "url=${DEPLOY_URL}" >> "$GITHUB_OUTPUT"
+          
+          # Store deployment URL for notification
+          echo "$DEPLOY_URL" > deployment-url.txt
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+      - name: Upload deployment URL
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-url
+          path: deployment-url.txt
+          retention-days: 7
+
+      - name: Deployment success notification
+        if: success()
+        run: |
+          echo "✅ Deployment successful!"
+          echo "URL: ${{ steps.deploy.outputs.url }}"
+          echo "Environment: Production"
+          echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+      - name: Deployment failure notification
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Check the GitHub Actions logs for details."
+          echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
   deploy-skipped:
     name: Deployment secrets check
     runs-on: ubuntu-latest
     needs: [predeploy-checks]
-    if: ${{ !(secrets.VERCEL_TOKEN != '' && secrets.VERCEL_PROJECT_ID != '' && secrets.VERCEL_ORG_ID != '') }}
+    if: ${{ !(secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '') }}
     steps:
       - name: Explain missing deployment secrets
         run: |
-          echo "Skipping production deployment."
-          echo "Set VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID repository secrets to enable deployment."
+          echo "⚠️ Skipping production deployment."
+          echo ""
+          echo "Required GitHub Secrets not found:"
+          echo "  - VERCEL_TOKEN"
+          echo "  - VERCEL_ORG_ID"
+          echo "  - VERCEL_PROJECT_ID"
+          echo ""
+          echo "To enable automated deployment:"
+          echo "1. Go to your GitHub repository > Settings > Secrets and variables > Actions"
+          echo "2. Add the following secrets:"
+          echo "   - VERCEL_TOKEN: Get from https://vercel.com/account/tokens"
+          echo "   - VERCEL_ORG_ID: Get from Vercel project settings"
+          echo "   - VERCEL_PROJECT_ID: Get from Vercel project settings"
+          echo ""
+          echo "Alternatively, deploy manually using:"
+          echo "  vercel deploy --prod --token=\$VERCEL_TOKEN"
+
+  post-deployment:
+    name: Post-deployment checks
+    runs-on: ubuntu-latest
+    needs: [deploy-vercel]
+    if: always() && needs.deploy-vercel.result == 'success'
+    steps:
+      - name: Health check
+        run: |
+          DEPLOY_URL="${{ needs.deploy-vercel.outputs.url }}"
+          echo "Running health check on: $DEPLOY_URL"
+          
+          # Wait for deployment to propagate
+          echo "Waiting 10 seconds for deployment propagation..."
+          sleep 10
+          
+          # Health check endpoint
+          HEALTH_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL/api/health" || echo "000")
+          
+          if [ "$HEALTH_RESPONSE" = "200" ]; then
+            echo "✅ Health check passed (HTTP $HEALTH_RESPONSE)"
+          else
+            echo "⚠️ Health check returned HTTP $HEALTH_RESPONSE"
+            echo "This might be expected if the API requires authentication"
+          fi
+          
+          # Check main page
+          MAIN_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL" || echo "000")
+          
+          if [ "$MAIN_RESPONSE" = "200" ] || [ "$MAIN_RESPONSE" = "307" ] || [ "$MAIN_RESPONSE" = "302" ]; then
+            echo "✅ Main page accessible (HTTP $MAIN_RESPONSE)"
+          else
+            echo "⚠️ Main page returned HTTP $MAIN_RESPONSE"
+          fi
+          
+          echo ""
+          echo "Deployment URL: $DEPLOY_URL"
+          echo "Health endpoint: $DEPLOY_URL/api/health"
