@@ -1,0 +1,20 @@
+[pr_reviewer]
+# Custom rules for the ZAR Ledger project (South Africa fintech context)
+extra_instructions = '''
+- Monetary values must be stored and transmitted as BigInt cents (e.g., R150.50 => 15050); flag any float/decimal money usage.
+- Validate rounding adjustments for uneven splits ("penny gap"), prefer deterministic rounding rules.
+- Enforce POPIA: highlight unencrypted/ unhashed SA ID numbers, phone numbers, or emails in code, logs, and test fixtures.
+- Ensure every API response includes a Request-ID and that it propagates through logs.
+- Verify database mutations use explicit transactions with try/catch and rollback; no implicit autocommit paths.
+- Stack guardrails: Next.js 16+, Hono backend, Drizzle ORM (PostgreSQL), Zod validation, Vitest tests, Zustand state, TanStack Query data fetching, Bun runtime only.
+'''
+
+[github_action_config]
+auto_review = true
+auto_describe = false
+auto_improve = false
+enable_output = true
+
+[models]
+# Leave model empty to use the action default; uncomment to pin.
+# default = "gpt-4o-mini"

@@ -1,0 +1,25 @@
+name: AI Code Review (PR-Agent)
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Run PR-Agent
+    if: ${{ secrets.PR_AGENT_OPENAI_API_KEY != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: PR-Agent review
+        uses: qodo-ai/pr-agent@v0.31.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.PR_AGENT_OPENAI_API_KEY }}
+          PR_AGENT_SETTINGS_PATH: .github/pr-agent.toml
