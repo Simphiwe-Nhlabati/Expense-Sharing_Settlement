@@ -17,10 +17,23 @@ concurrency:
 env:
   BUN_VERSION: 1.2.21
   NODE_ENV: production
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
+  check-secrets:
+    name: Check deployment secrets
+    runs-on: ubuntu-latest
+    outputs:
+      can-deploy: ${{ steps.check.outputs.can-deploy }}
+    steps:
+      - name: Check if Vercel secrets are set
+        id: check
+        run: |
+          if [ -n "${{ secrets.VERCEL_TOKEN }}" ] && [ -n "${{ secrets.VERCEL_ORG_ID }}" ] && [ -n "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            echo "can-deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "can-deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+
   predeploy-checks:
     name: Pre-deploy checks
     runs-on: ubuntu-latest
@@ -63,11 +76,11 @@ jobs:
   deploy-vercel:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
-    needs: [predeploy-checks]
+    needs: [predeploy-checks, check-secrets]
+    if: ${{ needs.check-secrets.outputs.can-deploy == 'true' }}
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
-    if: ${{ env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' && secrets.VERCEL_TOKEN != '' }}
     outputs:
       url: ${{ steps.deploy.outputs.url }}
     steps:
@@ -103,15 +116,15 @@ jobs:
           echo "Starting production deployment..."
           DEPLOY_OUTPUT=$(vercel deploy --prod --token="${VERCEL_TOKEN}" 2>&1)
           DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^\s]+' | head -1)
-          
+
           if [ -z "$DEPLOY_URL" ]; then
             echo "Failed to extract deployment URL"
             exit 1
           fi
-          
+
           echo "Deployment URL: $DEPLOY_URL"
           echo "url=${DEPLOY_URL}" >> "$GITHUB_OUTPUT"
-          
+
           # Store deployment URL for notification
           echo "$DEPLOY_URL" > deployment-url.txt
         env:
@@ -142,10 +155,10 @@ jobs:
           echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
   deploy-skipped:
-    name: Deployment secrets check
+    name: Deployment skipped
     runs-on: ubuntu-latest
-    needs: [predeploy-checks]
-    if: ${{ env.VERCEL_ORG_ID == '' || env.VERCEL_PROJECT_ID == '' || secrets.VERCEL_TOKEN == '' }}
+    needs: [check-secrets]
+    if: ${{ needs.check-secrets.outputs.can-deploy == 'false' }}
     steps:
       - name: Explain missing deployment secrets
         run: |
@@ -176,30 +189,30 @@ jobs:
         run: |
           DEPLOY_URL="${{ needs.deploy-vercel.outputs.url }}"
           echo "Running health check on: $DEPLOY_URL"
-          
+
           # Wait for deployment to propagate
           echo "Waiting 10 seconds for deployment propagation..."
           sleep 10
-          
+
           # Health check endpoint
           HEALTH_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL/api/health" || echo "000")
-          
+
           if [ "$HEALTH_RESPONSE" = "200" ]; then
             echo "✅ Health check passed (HTTP $HEALTH_RESPONSE)"
           else
             echo "⚠️ Health check returned HTTP $HEALTH_RESPONSE"
             echo "This might be expected if the API requires authentication"
           fi
-          
+
           # Check main page
           MAIN_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL" || echo "000")
-          
+
           if [ "$MAIN_RESPONSE" = "200" ] || [ "$MAIN_RESPONSE" = "307" ] || [ "$MAIN_RESPONSE" = "302" ]; then
             echo "✅ Main page accessible (HTTP $MAIN_RESPONSE)"
           else
             echo "⚠️ Main page returned HTTP $MAIN_RESPONSE"
           fi
-          
+
           echo ""
           echo "Deployment URL: $DEPLOY_URL"
           echo "Health endpoint: $DEPLOY_URL/api/health"
