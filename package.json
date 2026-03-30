@@ -86,5 +86,9 @@
   "trustedDependencies": [
     "sharp",
     "unrs-resolver"
-  ]
+  ],
+  "overrides": {
+    "picomatch": "^4.0.4",
+    "rollup": "^4.60.1"
+  }
 }
