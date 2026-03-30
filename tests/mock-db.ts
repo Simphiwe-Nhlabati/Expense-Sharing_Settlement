@@ -62,7 +62,7 @@ function getTableName(table: any): string {
 // Helper to extract value from Drizzle SQL expression (eq, and, etc.)
 function extractWhereCondition(whereClause: any): { field: string; value: any } | null {
   if (!whereClause) return null;
-  
+
   // Drizzle's eq() returns an object with queryChunks
   if (whereClause.queryChunks) {
     // Extract field and value from the SQL expression
@@ -70,11 +70,20 @@ function extractWhereCondition(whereClause: any): { field: string; value: any } 
     // Look for the field name and value in the chunks
     let field = '';
     let value: any = null;
-    
+
     for (const chunk of chunks) {
+      // Check for field name in various formats
       if (chunk?.name) {
         field = chunk.name;
+      } else if (chunk?.onTable?.key) {
+        // Drizzle may store field info in onTable
+        field = chunk.onTable.key;
+      } else if (chunk?.field?.key) {
+        // Or in field.key
+        field = chunk.field.key;
       }
+      
+      // Check for value
       if (chunk?.value !== undefined && typeof chunk.value !== 'string') {
         value = chunk.value;
       } else if (typeof chunk === 'string' && !chunk.includes('(')) {
@@ -85,17 +94,17 @@ function extractWhereCondition(whereClause: any): { field: string; value: any } 
         }
       }
     }
-    
+
     // Try to get value from params
     if (whereClause.params && whereClause.params.length > 0) {
       value = whereClause.params[0];
     }
-    
+
     if (field && value !== null && value !== undefined) {
       return { field, value };
     }
   }
-  
+
   return null;
 }
 
@@ -137,7 +146,8 @@ export function createMockDb() {
             throw new Error('Database constraint violation');
           }
           // Idempotency keys are saved immediately, not through transaction
-          if (tableName.includes('idempotency')) {
+          // Check for idempotency keys table by name or by data structure
+          if (tableName.includes('idempotency') || tableName.includes('idempotency_keys') || (data.key && data.userId && data.path)) {
             mockTables.idempotencyKeys.push(data);
           } else if (tableName.includes('expense')) {
             transactionState.pendingChanges.expenses.push({ ...data, id: `expense-${mockTables.expenses.length + 1}` });
@@ -214,8 +224,16 @@ export function createMockDb() {
       return Promise.resolve(result || null);
     }
     try {
-      const result = mockTables.idempotencyKeys.find((item: any) => where(item));
-      return Promise.resolve(result || null);
+      // Fallback: try calling where as a function with a mock item
+      // This handles Drizzle's SQL expression objects
+      for (const item of mockTables.idempotencyKeys) {
+        // Create a proxy that can evaluate the where clause
+        const result = where(item);
+        if (result) {
+          return Promise.resolve(item);
+        }
+      }
+      return Promise.resolve(null);
     } catch {
       return Promise.resolve(null);
     }
