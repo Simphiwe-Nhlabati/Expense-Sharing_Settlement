@@ -14,13 +14,17 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
   ]),
   {
-    // Lenient rules for test files
-    files: ["tests/**/*", "**/*.test.ts", "**/*.test.tsx"],
+    // Lenient rules for test files and scripts
+    files: ["tests/**/*", "**/*.test.ts", "**/*.test.tsx", "scripts/**/*"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-require-imports": "off",
       "react-hooks/set-state-in-effect": "off",
       "react/no-unescaped-entities": "off",
+      "@typescript-eslint/no-empty-function": "off",
+      "no-unused-vars": "off",
+      "prefer-const": "off",
     },
   },
   {

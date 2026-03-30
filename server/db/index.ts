@@ -17,7 +17,7 @@ const getConnectionString = () => {
 
 // Lazy initialization - connection is only created when db is first accessed
 let _client: ReturnType<typeof postgres> | null = null;
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
 export const getDb = () => {
   if (!_db) {
@@ -31,7 +31,7 @@ export const getDb = () => {
 
 // Export a proxy for backwards compatibility
 // This allows existing imports like `import { db } from ...` to continue working
-export const db = new Proxy({} as ReturnType<typeof drizzle>, {
+export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
   get: (_target, prop) => {
     const database = getDb();
     return Reflect.get(database, prop);
