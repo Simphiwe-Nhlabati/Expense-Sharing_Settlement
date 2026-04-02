@@ -39,7 +39,7 @@ export default function SignUpPage() {
         setUser(data.user)
         setAccessToken(data.accessToken)
         toast.success("Account created successfully!")
-        router.push("/groups")
+        router.push("/")
       } else {
         toast.error(data.error || "Failed to create account")
       }

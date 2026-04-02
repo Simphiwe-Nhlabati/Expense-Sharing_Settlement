@@ -38,7 +38,7 @@ export default function SignInPage() {
         setUser(data.user)
         setAccessToken(data.accessToken)
         toast.success("Welcome back!")
-        router.push("/groups")
+        router.push("/")
       } else {
         toast.error(data.error || "Failed to sign in")
       }
