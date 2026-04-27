@@ -1,27 +1,26 @@
 import { AuthHeader } from "@/components/auth-header";
-import { Input } from "@/components/ui/input";
 import { CreateGroupDialog } from "@/components/features/groups/create-group-dialog";
 import { GroupList } from "@/components/features/groups/group-list";
-import { Search } from "lucide-react";
 
 export default async function GroupsIndexPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <AuthHeader />
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div className="space-y-1">
-                <h1 className="text-3xl font-bold tracking-tight">Your Groups</h1>
-                <p className="text-muted-foreground">Manage your shared expenses.</p>
-            </div>
-            <CreateGroupDialog />
+      <main className="flex-1 container mx-auto px-4 py-10 max-w-6xl relative z-10">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+          <div>
+            <p className="label-mono text-muted-foreground mb-1">Shared Ledgers</p>
+            <h1
+              className="text-3xl font-bold"
+              style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.02em" }}
+            >
+              Your Groups
+            </h1>
+          </div>
+          <CreateGroupDialog />
         </div>
 
-        <div className="relative mb-6">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search groups..." className="pl-9 max-w-sm" />
-        </div>
-
+        <div className="gold-rule mb-8" />
         <GroupList />
       </main>
     </div>

@@ -2,7 +2,6 @@
 
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Users, Banknote, ArrowRight } from "lucide-react"
 import Link from "next/link"
@@ -20,22 +19,15 @@ interface Group {
 async function fetchGroups(): Promise<Group[]> {
   const response = await fetch("/api/groups", {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     credentials: "include",
   })
-
   if (!response.ok) {
-    if (response.status === 401) {
-      return [] // Return empty array if not authenticated
-    }
+    if (response.status === 401) return []
     const error = await response.json().catch(() => ({ error: "Failed to fetch groups" }))
     throw new Error(error.error || "Failed to fetch groups")
   }
-
   const data = await response.json()
-  // Backend returns { groups: [...] }, extract the array
   return data.groups || []
 }
 
@@ -44,28 +36,23 @@ export function GroupList() {
     queryKey: ["groups"],
     queryFn: fetchGroups,
     refetchOnMount: true,
-    // Remove duplicate refetch - rely on query options only
   })
 
-  // Removed manual useEffect refetch that caused double-fetch on mount
-
-  if (isLoading) {
-    return <GroupListSkeleton />
-  }
+  if (isLoading) return <GroupListSkeleton />
 
   if (error) {
     return (
-      <div className="text-center p-12 border-2 border-dashed rounded-2xl bg-destructive/10 animate-scale-in">
-        <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/20 mb-4">
-          <Users className="h-8 w-8 text-destructive" />
+      <div className="border border-dashed border-destructive/40 p-12 text-center animate-scale-in">
+        <div className="inline-flex h-10 w-10 items-center justify-center border border-destructive/30 text-destructive mb-4">
+          <Users className="h-5 w-5" />
         </div>
-        <h3 className="text-lg font-semibold mb-2">Failed to load groups</h3>
-        <p className="text-muted-foreground max-w-sm mx-auto mb-4">
+        <p className="label-mono text-destructive mb-2">Failed to load groups</p>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto mb-4">
           {error instanceof Error ? error.message : "An unexpected error occurred"}
         </p>
         <button
           onClick={() => window.location.reload()}
-          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="text-xs font-medium text-accent hover:underline underline-offset-4"
         >
           Try Again
         </button>
@@ -75,69 +62,72 @@ export function GroupList() {
 
   if (!groups?.length) {
     return (
-       <div className="text-center p-12 border-2 border-dashed rounded-2xl bg-muted/30 animate-scale-in">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-4">
-            <Users className="h-8 w-8 text-primary" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">No groups yet</h3>
-          <p className="text-muted-foreground max-w-sm mx-auto">
-            Create your first group to start tracking expenses with friends, family, or colleagues.
-          </p>
-       </div>
+      <div className="border border-dashed border-border/60 p-16 text-center animate-scale-in">
+        <div className="inline-flex h-10 w-10 items-center justify-center border border-border/60 text-muted-foreground mb-4">
+          <Users className="h-5 w-5" />
+        </div>
+        <p className="label-mono text-muted-foreground mb-2">No groups yet</p>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+          Create your first group to start tracking expenses with friends, family, or colleagues.
+        </p>
+      </div>
     )
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {groups.map((group) => (
+    <div className="border border-border/60 divide-y divide-border/60 md:grid md:grid-cols-2 md:divide-y-0 md:divide-x lg:grid-cols-3">
+      {groups.map((group, i) => (
         <Link key={group.id} href={`/groups/${group.id}`}>
-          <Card className="group relative overflow-hidden border-0 shadow-lg card-lift h-full bg-card">
-            {/* Gradient accent bar */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div
+            className="group relative p-6 hover:bg-secondary/40 transition-colors animate-scale-in overflow-hidden h-full"
+            style={{ animationDelay: `${i * 40}ms` }}
+          >
+            {/* Gold top accent on hover */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-gold opacity-0 group-hover:opacity-100 transition-opacity" />
 
-            <CardHeader className="pb-3 space-y-2">
-              <div className="flex justify-between items-start gap-2">
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold group-hover:text-primary transition-colors">
-                  {group.name}
-                </CardTitle>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary whitespace-nowrap">
-                  {group.currency}
+            {/* Group initial */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="relative h-10 w-10 flex items-center justify-center border border-border/60 group-hover:border-accent/40 transition-colors">
+                <div className="absolute inset-1 border border-border/30 group-hover:border-accent/20 transition-colors" />
+                <span
+                  className="relative text-sm font-bold text-muted-foreground group-hover:text-accent transition-colors"
+                  style={{ fontFamily: "var(--font-display)" }}
+                >
+                  {group.name.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <CardDescription className="line-clamp-2 text-sm">
-                {group.description || "No description provided"}
-              </CardDescription>
-            </CardHeader>
+              <span className="label-mono text-muted-foreground">{group.currency}</span>
+            </div>
 
-            <CardContent className="space-y-3">
-               <div className="flex items-center justify-between pt-2 border-t">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                     <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                       <Users className="h-4 w-4" />
-                     </div>
-                     <div>
-                       <p className="font-medium text-foreground">{group.members}</p>
-                       <p className="text-xs">Members</p>
-                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                     <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                       <Banknote className="h-4 w-4" />
-                     </div>
-                     <div className="text-right">
-                       <p className="font-medium text-foreground">{formatZarAmount(group.balance)}</p>
-                       <p className="text-xs">Balance</p>
-                     </div>
-                  </div>
-               </div>
+            {/* Name & description */}
+            <h3
+              className="text-base font-semibold mb-1 group-hover:text-accent transition-colors"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {group.name}
+            </h3>
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-5">
+              {group.description || "No description provided"}
+            </p>
 
-               {/* Hover arrow indicator */}
-               <div className="flex items-center justify-end text-primary opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
-                 <span className="text-sm font-medium mr-1">View Group</span>
-                 <ArrowRight className="h-4 w-4" />
-               </div>
-            </CardContent>
-          </Card>
+            {/* Stats row */}
+            <div className="flex items-center justify-between pt-4 border-t border-border/40">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Users className="h-3.5 w-3.5" />
+                <span className="font-medium text-foreground">{group.members}</span>
+                <span>members</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Banknote className="h-3.5 w-3.5" />
+                <span className="currency font-medium text-foreground">{formatZarAmount(group.balance)}</span>
+              </div>
+            </div>
+
+            {/* Hover arrow */}
+            <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all translate-x-1 group-hover:translate-x-0">
+              <ArrowRight className="h-4 w-4 text-accent" />
+            </div>
+          </div>
         </Link>
       ))}
     </div>
@@ -145,11 +135,16 @@ export function GroupList() {
 }
 
 function GroupListSkeleton() {
-   return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-         {[1,2,3,4,5,6].map(i => (
-             <Skeleton key={i} className="h-[180px] w-full rounded-2xl" />
-         ))}
-      </div>
-   )
+  return (
+    <div className="border border-border/60 divide-y divide-border/60 md:grid md:grid-cols-2 md:divide-y-0 md:divide-x lg:grid-cols-3">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div key={i} className="p-6 space-y-3">
+          <Skeleton className="h-10 w-10 rounded-none" />
+          <Skeleton className="h-4 w-3/4 rounded-none" />
+          <Skeleton className="h-3 w-full rounded-none" />
+          <Skeleton className="h-3 w-2/3 rounded-none" />
+        </div>
+      ))}
+    </div>
+  )
 }

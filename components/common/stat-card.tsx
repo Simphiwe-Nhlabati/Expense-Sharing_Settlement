@@ -20,65 +20,40 @@ export function StatCard({
   className,
   colorScheme = "primary",
 }: StatCardProps) {
-  const colorClasses = {
-    primary: "bg-white/10 hover:bg-white/15",
-    debt: "bg-red-500/10 hover:bg-red-500/15",
-    credit: "bg-emerald-500/10 hover:bg-emerald-500/15",
-    neutral: "bg-slate-500/10 hover:bg-slate-500/15",
-  };
-
-  const amountColorClasses = {
+  const amountColor = {
     primary: "text-white",
-    debt: "text-red-200",
-    credit: "text-emerald-300",
+    debt:    "text-red-300",
+    credit:  "text-emerald-300",
     neutral: "text-white",
-  };
+  }[colorScheme];
 
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl p-6 transition-all duration-300 backdrop-blur-sm",
-        colorClasses[colorScheme],
+        "relative overflow-hidden bg-white/5 hover:bg-white/8 transition-colors p-5 md:p-6",
         className
       )}
     >
-      <div className="relative z-10 space-y-3">
-        {/* Header with icon and label */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-white/80">{label}</span>
-          {icon && <div className="h-5 w-5 text-white/70">{icon}</div>}
-        </div>
-
-        {/* Amount */}
-        <div>
-          <p className={cn("text-3xl font-bold currency", amountColorClasses[colorScheme])}>
-            {typeof amount === "number" ? amount.toLocaleString("en-ZA") : amount}
-          </p>
-        </div>
-
-        {/* Description */}
-        {description && (
-          <p className="text-xs text-white/60 pt-1">{description}</p>
-        )}
-
-        {/* Trend indicator */}
-        {trend && (
-          <div className="pt-2">
-            {trend === "up" && (
-              <span className="text-xs font-medium text-emerald-300">↑ Increasing</span>
-            )}
-            {trend === "down" && (
-              <span className="text-xs font-medium text-red-300">↓ Decreasing</span>
-            )}
-            {trend === "neutral" && (
-              <span className="text-xs font-medium text-slate-300">→ Stable</span>
-            )}
-          </div>
-        )}
+      <div className="flex items-center justify-between mb-3">
+        <span className="label-mono text-white/40">{label}</span>
+        {icon && <span className="text-white/30 h-4 w-4">{icon}</span>}
       </div>
 
-      {/* Background accent */}
-      <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5 blur-2xl group-hover:bg-white/10 transition-colors" />
+      <p className={cn("currency text-2xl md:text-3xl font-bold mb-1", amountColor)}>
+        {typeof amount === "number" ? amount.toLocaleString("en-ZA") : amount}
+      </p>
+
+      {description && (
+        <p className="text-xs text-white/30">{description}</p>
+      )}
+
+      {trend && (
+        <div className="mt-2">
+          {trend === "up"      && <span className="text-xs text-emerald-300">↑ Increasing</span>}
+          {trend === "down"    && <span className="text-xs text-red-300">↓ Decreasing</span>}
+          {trend === "neutral" && <span className="text-xs text-white/40">→ Stable</span>}
+        </div>
+      )}
     </div>
   );
 }

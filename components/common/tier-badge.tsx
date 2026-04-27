@@ -8,38 +8,33 @@ interface TierBadgeProps {
   className?: string;
 }
 
-const tierConfig: Record<SubscriptionTier, { bg: string; text: string; label: string; comingSoon?: boolean }> = {
+const tierConfig: Record<SubscriptionTier, { border: string; text: string; label: string; comingSoon?: boolean }> = {
   BRAAI: {
-    bg: "bg-green-500/20 border-green-500/30",
-    text: "text-green-700 dark:text-green-400",
-    label: "Free",
+    border: "border-accent/40",
+    text:   "text-accent",
+    label:  "Free",
   },
   HOUSEHOLD: {
-    bg: "bg-blue-500/20 border-blue-500/30",
-    text: "text-blue-700 dark:text-blue-400",
-    label: "Household (Coming Soon)",
+    border: "border-blue-500/30",
+    text:   "text-blue-500",
+    label:  "Household (Coming Soon)",
     comingSoon: true,
   },
   AGENT: {
-    bg: "bg-purple-500/20 border-purple-500/30",
-    text: "text-purple-700 dark:text-purple-400",
-    label: "Agent (Coming Soon)",
+    border: "border-orange-500/30",
+    text:   "text-orange-500",
+    label:  "Agent (Coming Soon)",
     comingSoon: true,
   },
 };
 
-export function TierBadge({
-  tier,
-  showLabel = true,
-  className,
-}: TierBadgeProps) {
+export function TierBadge({ tier, showLabel = true, className }: TierBadgeProps) {
   const config = tierConfig[tier];
-
   return (
     <div
       className={cn(
-        "inline-flex items-center px-3 py-1 rounded-full border text-xs font-semibold",
-        config.bg,
+        "inline-flex items-center px-2.5 py-1 border label-mono",
+        config.border,
         config.text,
         className
       )}
